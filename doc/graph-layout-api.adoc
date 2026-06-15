@@ -1,4 +1,4 @@
-= Kvizle API
+= grale API
 Dr. Max Völkel <mv@maxvoelkel.de>
 :revdate: 2026-06-15
 :revnumber: 0.12
@@ -12,12 +12,12 @@ Dr. Max Völkel <mv@maxvoelkel.de>
 :idseparator: -
 
 [abstract]
-Kvizle is a graph-layout API for TypeScript and a *strict superset of the dagre
+grale is a graph-layout API for TypeScript and a *strict superset of the dagre
 serialised JSON structure* (graphlib's `json.write` format, latest `dagrejs/graphlib`,
-carrying `dagrejs/dagre` layout attributes). Kvizle is defined as a *data format*
+carrying `dagrejs/dagre` layout attributes). grale is defined as a *data format*
 — JSON in, JSON out — not as a class library. Any serialised dagre graph is a valid
-Kvizle request *unchanged*, and Kvizle only adds optional fields. On top of the dagre
-structure Kvizle adds optional capabilities the original lacks: *pinned nodes*, *focus
+grale request *unchanged*, and grale only adds optional fields. On top of the dagre
+structure grale adds optional capabilities the original lacks: *pinned nodes*, *focus
 nodes*, *layout stability across turns* (`prevLayouts`), *per-edge preferred directions*
 and *hidden constraint links*, *per-side node ports*, *reusable edge markers*, *n-ary
 hyperedges*, and honoured edge *weight* and *lineWidth*. Every label may carry opaque
@@ -25,21 +25,21 @@ hyperedges*, and honoured edge *weight* and *lineWidth*. Every label may carry o
 dagre omits.
 
 The dagre JSON baseline this document supersets is specified separately in
-`xref:dagre-js.adoc[]`; this spec describes only what Kvizle adds and how it stays
+`xref:dagre-js.adoc[]`; this spec describes only what grale adds and how it stays
 compatible.
 
 [IMPORTANT]
 .What "strict superset" means here
 ====
-Kvizle is a superset of the *JSON structure* (the keys and label fields), not of dagre's
-*pixel output*. Kvizle is a different layout engine, so for the same graph the computed
+grale is a superset of the *JSON structure* (the keys and label fields), not of dagre's
+*pixel output*. grale is a different layout engine, so for the same graph the computed
 coordinates differ from dagre's. The guarantee is:
 
-* every key of the `xref:dagre-js.adoc#the-envelope[JsonGraph envelope]` exists in Kvizle
+* every key of the `xref:dagre-js.adoc#the-envelope[JsonGraph envelope]` exists in grale
   with the same shape;
 * every dagre label field keeps its meaning, allowed values, and default;
 * a serialised dagre graph is accepted and produces a *valid* layout with no edits;
-* every Kvizle addition is an *optional* field — when none are present, the request
+* every grale addition is an *optional* field — when none are present, the request
   reduces to the dagre structure (see <<reduction-to-dagre>>).
 ====
 
@@ -50,30 +50,30 @@ for the normative detail.
 
 === The shape of a call
 
-Kvizle is a function from a graph JSON to a graph JSON:
+grale is a function from a graph JSON to a graph JSON:
 
 [source,ts]
 ----
-import { layout } from 'kvizle';
+import { layout } from 'grale';
 
-const out = layout(graphJson);   // KvizleGraph -> KvizleGraph (positions filled in)
+const out = layout(graphJson);   // graleGraph -> graleGraph (positions filled in)
 ----
 
 The input is the `xref:dagre-js.adoc#the-envelope[dagre JSON envelope]`
-(`{ options, value, nodes, edges }`) with optional Kvizle fields added to the labels.
+(`{ options, value, nodes, edges }`) with optional grale fields added to the labels.
 The output is the same envelope with `x`/`y` on nodes, `points` on edges, and
 `width`/`height` on the graph label filled in.
 
 === Feeding a dagre graph (drop-in)
 
-Any dagre/graphlib graph becomes a Kvizle request by serialising it:
+Any dagre/graphlib graph becomes a grale request by serialising it:
 
 [source,ts]
 ----
 import * as graphlib from '@dagrejs/graphlib';
-import { layout } from 'kvizle';
+import { layout } from 'grale';
 
-const out = layout(graphlib.json.write(g));   // serialise dagre graph -> Kvizle
+const out = layout(graphlib.json.write(g));   // serialise dagre graph -> grale
 const g2  = graphlib.json.read(out);          // back to a graph, positions in the labels
 ----
 
@@ -96,7 +96,7 @@ No code change to how the graph was *built* — only the layouter at the end dif
 }
 ----
 
-This is a plain `xref:dagre-js.adoc[]` document — Kvizle lays it out and returns the same
+This is a plain `xref:dagre-js.adoc[]` document — grale lays it out and returns the same
 structure with positions filled in.
 
 === The three extensions in one request
@@ -140,7 +140,7 @@ structure with positions filled in.
 | graph `value`       | `rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `margin*`, `acyclicer`, `ranker`
 |===
 
-.What Kvizle adds (all optional)
+.What grale adds (all optional)
 [cols="1,1,2",frame=ends]
 |===
 | Location | Field | Meaning
@@ -169,9 +169,9 @@ structure with positions filled in.
 [[part-ii-detailed-reference]]
 == Part II — Detailed reference
 
-=== The `KvizleGraph` structure
+=== The `graleGraph` structure
 
-`KvizleGraph` keeps the `xref:dagre-js.adoc#the-envelope[dagre JsonGraph envelope]` intact —
+`graleGraph` keeps the `xref:dagre-js.adoc#the-envelope[dagre JsonGraph envelope]` intact —
 the same `options`, `nodes[]`, `edges[]`, and `value` keys, the same `{ v, w, name? }` edge
 identity, the same `parent` for compound graphs — and enriches the three *label* objects
 (`value`) with the optional fields in <<graph-label-additions>>, <<node-label-additions>>,
@@ -179,16 +179,16 @@ and <<edge-label-additions>>. It makes two purely-additive envelope extensions: 
 `id` on each edge (see <<edge-id>>) and a top-level `hyperedges[]` array (see
 <<hyperedges>>). A document that uses none of these is byte-for-byte a dagre document.
 
-NOTE: In a compound graph Kvizle allows edges that *cross cluster boundaries* — including
+NOTE: In a compound graph grale allows edges that *cross cluster boundaries* — including
 an edge between a node and one of its own ancestors (child ↔ parent). dagre rejects these
 (it crashes with "Cannot set property 'rank' of undefined" — issues #238, #236, #426);
-Kvizle treats a cluster boundary as permeable and routes the edge through it.
+grale treats a cluster boundary as permeable and routes the edge through it.
 
 === `layout(graph)`
 
 [source,ts]
 ----
-function layout(graph: KvizleGraph): KvizleGraph;
+function layout(graph: graleGraph): graleGraph;
 ----
 
 Pure function, JSON in / JSON out. It returns a new envelope of the same shape with the
@@ -211,7 +211,7 @@ calling again is how incremental layout works — see <<respecting-previous-layo
 
 The dagre options (`rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `marginx`,
 `marginy`, `acyclicer`, `ranker`) are unchanged — see
-`xref:dagre-js.adoc#graph-label[the baseline]`. Kvizle adds:
+`xref:dagre-js.adoc#graph-label[the baseline]`. grale adds:
 
 [cols="1,1,1,2",frame=ends]
 |===
@@ -233,9 +233,9 @@ The dagre options (`rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `marginx
 === Node label additions (`value`)
 
 The dagre node fields (`width`, `height` in; `x`, `y` out) are unchanged — see
-`xref:dagre-js.adoc#node-label[the baseline]`. Note that under Kvizle `x`/`y` are
+`xref:dagre-js.adoc#node-label[the baseline]`. Note that under grale `x`/`y` are
 *also read as input* when the node is `pinned`. (Stability positions travel separately in
-`prevLayouts`, not in these fields.) Kvizle adds:
+`prevLayouts`, not in these fields.) grale adds:
 
 [cols="1,1,2",frame=ends]
 |===
@@ -252,7 +252,7 @@ The dagre node fields (`width`, `height` in; `x`, `y` out) are unchanged — see
 
 The dagre edge fields (`minlen`, `weight`, `width`, `height`, `labelpos`, `labeloffset`;
 `points`, `x`, `y` out) are unchanged — see
-`xref:dagre-js.adoc#edge-label[the baseline]`. Kvizle honours `weight` as edge
+`xref:dagre-js.adoc#edge-label[the baseline]`. grale honours `weight` as edge
 *importance* (see <<weight-lineWidth>>) and adds:
 
 [cols="1,1,2",frame=ends]
@@ -309,7 +309,7 @@ drawing. And a single "previous position" is not enough — over many turns a no
 returns it should land where it last was. A node that has left the graph has no current
 position to anchor to.
 
-So Kvizle takes the layout *history* as an explicit input: `prevLayouts`, an array of past
+So grale takes the layout *history* as an explicit input: `prevLayouts`, an array of past
 frames, each a map from node id to its centre position.
 
 [source,json5]
@@ -391,7 +391,7 @@ array of them:
 ==== Preferred edge direction
 
 Real graphs mix relation kinds (`reportsTo`, `dependsOn`, `knows`) that should flow
-differently. Kvizle lets each edge declare a preferred direction:
+differently. grale lets each edge declare a preferred direction:
 
 [source,json5]
 ----
@@ -448,7 +448,7 @@ PlantUML's `-[hidden]->`. Set `hidden: true`:
 * Combined with `prefDir`, hidden links pin down *relative order* with no visible
   connection. A hidden `prefDir: "right"` edge from the True branch to the False branch
   forces True left of False (dagre issue #452); a hidden edge between two nodes that
-  should share a column keeps them aligned (issue #472). This is how Kvizle expresses
+  should share a column keeps them aligned (issue #472). This is how grale expresses
   node-alignment without a dedicated ordering field.
 
 [[ports]]
@@ -504,14 +504,14 @@ Ports have no dagre equivalent.
 Two independent edge scalars that dagre either ignores or overloads:
 
 `weight`:: *Importance.* A dagre field (default `1`) whose effect dagre's own users report
-seeing none of (issue #468). Kvizle honours it: higher-weight edges are kept shorter and
+seeing none of (issue #468). grale honours it: higher-weight edges are kept shorter and
 straighter and win ties in node ordering — weight is how you say "this edge matters most,
 route it first." A `weight` of `0` is special: the edge is still *drawn* but does **not**
 constrain rank assignment or ordering — Graphviz's `constraint=false` (issues #110, #112).
 So `hidden` and `weight: 0` are opposite corners: `hidden` constrains without drawing,
 `weight: 0` draws without constraining.
 `lineWidth`:: *Reserved space.* The drawn line width in pixels and the corridor the
-router keeps clear for the edge, so thick edges don't collide with neighbours. A Kvizle
+router keeps clear for the edge, so thick edges don't collide with neighbours. A grale
 addition: dagre's edge `width` / `height` are the *label* box size, not the line, so the
 new name avoids the clash.
 
@@ -526,7 +526,7 @@ new name avoids the clash.
 * *Self-loops.* An edge whose `v` and `w` are the same node (`v === w`) is allowed and
   drawn as a loop on one of the node's sides; it may bind a `fromPort` / `toPort` like any
   other edge. (dagre mishandles self-loops in clusters — issue #120.)
-* *Corner rounding.* Kvizle draws a single edge style — routed poly-lines, not a choice of
+* *Corner rounding.* grale draws a single edge style — routed poly-lines, not a choice of
   orthogonal vs spline (issues #111, #136). The graph-level `cornerRadius` is the one knob:
   it rounds every edge turn to that radius in pixels, `0` (default) leaving sharp corners.
 
@@ -585,13 +585,13 @@ sanctioned home for everything that is the *renderer's* business: colours, label
 
 `meta` keeps renderer data clear of <<diagnostics>>: a stray field *outside* `meta` is
 flagged `UNKNOWN_FIELD` (likely a typo), while anything *inside* `meta` passes through
-silently. It is how Kvizle carries arbitrary per-element data — colours, label text, types,
+silently. It is how grale carries arbitrary per-element data — colours, label text, types,
 dash patterns — without the layouter needing to understand any of it.
 
 [[routing-output]]
 ==== Waypoint normals, crossings, and z-order
 
-Three result enrichments Kvizle produces that dagre cannot. `normals` and
+Three result enrichments grale produces that dagre cannot. `normals` and
 `crossings` are *output only* — you never set them; `zIndex` you may.
 
 [source,json5]
@@ -608,7 +608,7 @@ Three result enrichments Kvizle produces that dagre cannot. `normals` and
 outward-normal angle in radians at each point, or `null` where undefined. Renderers use it
 to orient `startMarker` / `endMarker` and to offset edge labels off the line — dagre gives
 `points` but no tangent, so markers otherwise have to guess.
-`crossings`:: The pixel positions where this edge *unavoidably* crosses another. Kvizle
+`crossings`:: The pixel positions where this edge *unavoidably* crosses another. grale
 routes to minimise crossings and reports the residue, so the renderer can draw crossing
 shadows or bridges exactly where they occur — the recurring "reduce overlapping edges" ask
 dagre can't answer (issues #145, #211, #246, #281).
@@ -619,7 +619,7 @@ clusters, a crossing-over link above the crossed). Echoed on output either way.
 [[edge-id]]
 ==== Edge and hyperedge `id`
 
-Any edge or hyperedge may carry an optional `id` string. Kvizle does not use it for layout
+Any edge or hyperedge may carry an optional `id` string. grale does not use it for layout
 — it is echoed untouched — but it makes edges addressable for debugging, logging, and
 cross-referencing (a binary edge's structural identity is otherwise just its `(v, w, name)`
 triple). `id` sits on the edge / hyperedge *object*, beside `value`:
@@ -629,7 +629,7 @@ triple). `id` sits on the edge / hyperedge *object*, beside `value`:
 { "v": "a", "w": "b", "id": "e_42", "value": { ... } }
 ----
 
-It is a Kvizle envelope extension; dagre and `graphlib.json` ignore it.
+It is a grale envelope extension; dagre and `graphlib.json` ignore it.
 
 [[hyperedges]]
 ==== Hyperedges
@@ -739,7 +739,7 @@ waypoint normals, reserved marker / port boxes. Off, the output has none of it.
 ==== Diagnostics (output)
 
 dagre returns nothing when something is off — a dangling edge or an impossible
-constraint just silently skews the drawing. Kvizle attaches a `diagnostics` object to
+constraint just silently skews the drawing. grale attaches a `diagnostics` object to
 every result so callers can see what happened:
 
 [source,json5]
@@ -768,7 +768,7 @@ every result so callers can see what happened:
 | `BAD_PORT`         | a `fromPort`/`toPort` index is out of range; the end falls back to centre attachment
 | `BAD_MARKER`       | an edge references a `startMarker`/`endMarker` id not in the graph `markers` registry; the marker is dropped
 | `BAD_FOCUS`        | a `focus` id is not in `nodes[]`; it is ignored
-| `UNKNOWN_FIELD`    | a label carries a field Kvizle does not recognise (likely a typo); it is ignored
+| `UNKNOWN_FIELD`    | a label carries a field grale does not recognise (likely a typo); it is ignored
 |===
 
 Unknown fields are *ignored* (dagre-compatible — labels are open objects), but each one is
@@ -788,7 +788,7 @@ signal for UI animation.
 [[reduction-to-dagre]]
 === Reduction to dagre
 
-Kvizle reduces exactly to the dagre structure when none of the additions are present.
+grale reduces exactly to the dagre structure when none of the additions are present.
 Formally, for a request where:
 
 * no node `value` has `pinned` or `ports`,
@@ -798,7 +798,7 @@ Formally, for a request where:
 * there are no `hyperedges`, and no edge carries an `id`,
 
 the document is a plain `xref:dagre-js.adoc[]` JsonGraph: same keys, same label fields,
-same meanings and defaults. (Computed coordinates may differ — Kvizle is a different
+same meanings and defaults. (Computed coordinates may differ — grale is a different
 engine — and the output additionally carries a `diagnostics` object, per-point `normals`,
 any `crossings`, and a computed `zIndex`; otherwise the structure and result shape are
 identical. See the opening callout.)
@@ -813,7 +813,7 @@ identical. See the opening callout.)
 
 === TypeScript types
 
-The dagre fields are repeated here so the Kvizle label types are self-contained; their
+The dagre fields are repeated here so the grale label types are self-contained; their
 authoritative semantics live in `xref:dagre-js.adoc[]`.
 
 [source,ts]
@@ -848,7 +848,7 @@ export interface GraphLabel {
   ranker?: 'network-simplex' | 'tight-tree' | 'longest-path';
   width?: number;   // out
   height?: number;  // out
-  // Kvizle
+  // grale
   stability?: number;                          // 0..1, default 0
   prevLayouts?: NodePositions[];               // layout history, oldest first; newest last
   focus?: string | string[];                   // node id(s) the layout centres on
@@ -866,7 +866,7 @@ export interface NodeLabel {
   height?: number;
   x?: number;   // out (also in, when pinned)
   y?: number;
-  // Kvizle
+  // grale
   pinned?: boolean;   // treat x/y as input (hard pin) rather than output
   ports?: { top?: number; left?: number; bottom?: number; right?: number };  // ports per side
   zIndex?: number;                  // draw order (in/out)
@@ -885,7 +885,7 @@ export interface EdgeLabel {
   points?: Point[];  // out
   x?: number;        // out
   y?: number;        // out
-  // Kvizle
+  // grale
   prefDir?: Direction;
   hidden?: boolean;      // constrains layout but not drawn (no output points)
   lineWidth?: number;    // reserved corridor width / line width (px), != dagre label width
@@ -956,7 +956,7 @@ export interface Hyperedge {
 }
 
 // --- the envelope (superset of graphlib JsonGraph) ---
-export interface KvizleGraph {
+export interface graleGraph {
   options: { directed: boolean; multigraph: boolean; compound: boolean };
   value?: GraphLabel;
   nodes: { v: string; value?: NodeLabel; parent?: string }[];
@@ -965,7 +965,7 @@ export interface KvizleGraph {
   diagnostics?: Diagnostics;   // out
 }
 
-export function layout(graph: KvizleGraph): KvizleGraph;
+export function layout(graph: graleGraph): graleGraph;
 ----
 
 .See also

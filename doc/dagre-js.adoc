@@ -1,0 +1,193 @@
+= dagre serialised JSON structure (baseline)
+Dr. Max Völkel <mv@maxvoelkel.de>
+:revdate: 2026-06-15
+:revnumber: 0.2
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 3
+:icons: font
+:source-highlighter: highlight.js
+:idprefix:
+:idseparator: -
+
+[abstract]
+This is a reference of the *serialised JSON structure* of a
+https://github.com/dagrejs/dagre[dagre] graph — the format produced by graphlib's
+`json.write()` and consumed by `json.read()`
+(https://github.com/dagrejs/graphlib[`dagrejs/graphlib`], `lib/json.ts`), carrying
+dagre's layout attributes in the node, edge, and graph labels.
+
+It is deliberately *not* a reference of the graphlib JavaScript builder API
+(`setNode`, `setEdge`, `predecessors`, …). `xref:spec-kvizle-api.adoc[Kvizle]` is a data
+format, not a class library, so the structure it must be a strict superset of is this
+JSON document — not a set of methods. Every key, label field, allowed value, and default
+listed here exists in the Kvizle JSON with the same meaning; Kvizle adds optional fields
+on top and removes nothing.
+
+This document tracks upstream — it is descriptive, not normative. When upstream and this
+page disagree, upstream wins and this page is a bug.
+
+== Where the structure comes from
+
+A dagre graph is a JavaScript object at runtime, but its *serialised* form is plain JSON,
+obtained through graphlib's `json` module:
+
+[source,ts]
+----
+import * as graphlib from '@dagrejs/graphlib';
+
+const json = graphlib.json.write(g);   // Graph  -> JsonGraph (plain JSON)
+const g2   = graphlib.json.read(json); // JsonGraph -> Graph
+----
+
+`write()` walks the graph and emits the envelope below; `read()` reconstructs an
+equivalent graph from it. The JSON round-trips losslessly. Kvizle takes this JSON as its
+interface so that callers can build a graph with any dagre/graphlib tooling, serialise it,
+and hand the bytes to Kvizle — no shared object graph, no method calls across the boundary.
+
+[NOTE]
+The verbatim source of the structure is `lib/json.ts` in `dagrejs/graphlib`
+(`write` / `writeNodes` / `writeEdges` / `read`). The interfaces in <<the-envelope>> are
+copied from there.
+
+[[the-envelope]]
+== The `JsonGraph` envelope
+
+[source,ts]
+----
+interface JsonGraph {
+  options: GraphOptions;   // graph mode flags
+  nodes:   JsonNode[];     // one entry per node
+  edges:   JsonEdge[];     // one entry per edge
+  value?:  unknown;        // the graph label  (dagre layout options — see § Graph label)
+}
+
+interface GraphOptions {
+  directed:   boolean;     // default true
+  multigraph: boolean;     // default false — parallel edges allowed (need `name`)
+  compound:   boolean;     // default false — parent/child nesting allowed
+}
+
+interface JsonNode {
+  v:       string;         // node id
+  value?:  unknown;        // the node label  (dagre node attributes — see § Node label)
+  parent?: string;         // parent node id (only in a compound graph)
+}
+
+interface JsonEdge {
+  v:       string;         // source node id
+  w:       string;         // target node id
+  name?:   string;         // disambiguates parallel edges (only in a multigraph)
+  value?:  unknown;        // the edge label  (dagre edge attributes — see § Edge label)
+}
+----
+
+Notes on the envelope:
+
+* An edge is identified by the triple `{ v, w, name? }`; `name` is present only when the
+  graph is a multigraph and needs to tell parallel edges apart.
+* `value` is omitted when a node / edge / graph has no label. dagre populates these
+  `value` objects with its layout attributes (below) and writes its results back into the
+  same objects.
+* `parent` appears on a node only in a compound graph (`options.compound === true`).
+
+[[graph-label]]
+== Graph label (`JsonGraph.value`)
+
+dagre's layout options, carried in the top-level `value`.
+
+[cols="1,1,1,2",frame=ends]
+|===
+| Field | Type | Default | Allowed values
+
+| `rankdir`   | string | `"TB"`              | `TB`, `BT`, `LR`, `RL`
+| `align`     | string | _(none)_            | `UL`, `UR`, `DL`, `DR`
+| `nodesep`   | number | `50`                | px between adjacent nodes in a rank
+| `edgesep`   | number | `10`                | px between adjacent edges
+| `ranksep`   | number | `50`                | px between ranks
+| `marginx`   | number | `0`                 | x margin around the graph
+| `marginy`   | number | `0`                 | y margin around the graph
+| `acyclicer` | string | _(none)_            | `greedy`
+| `ranker`    | string | `"network-simplex"` | `network-simplex`, `tight-tree`, `longest-path`
+| `width`     | number | _out_               | layout bounding-box width
+| `height`    | number | _out_               | layout bounding-box height
+|===
+
+[[node-label]]
+== Node label (`JsonNode.value`)
+
+[cols="1,1,1,2",frame=ends]
+|===
+| Field | Type | Direction | Meaning
+
+| `width`  | number | in  | node width (px)
+| `height` | number | in  | node height (px)
+| `x`      | number | out | centre x (px, origin top-left)
+| `y`      | number | out | centre y (px, origin top-left)
+|===
+
+[[edge-label]]
+== Edge label (`JsonEdge.value`)
+
+[cols="1,1,1,2",frame=ends]
+|===
+| Field | Type | Default | Meaning
+
+| `minlen`      | number    | `1`   | minimum rank separation between endpoints
+| `weight`      | number    | `1`   | edge weight (higher ⇒ straighter / shorter)
+| `width`       | number    | `0`   | edge-label width (px)
+| `height`      | number    | `0`   | edge-label height (px)
+| `labelpos`    | string    | `"r"` | label position: `l`, `c`, `r`
+| `labeloffset` | number    | `10`  | label offset from the edge (px)
+| `points`      | `{x,y}[]` | _out_ | computed poly-line / spline points
+| `x`, `y`      | number    | _out_ | computed edge-label centre
+|===
+
+== Worked example
+
+A small directed graph, left-to-right, with two sized nodes and one edge — *input*:
+
+[source,json]
+----
+{
+  "options": { "directed": true, "multigraph": false, "compound": false },
+  "value": { "rankdir": "LR" },
+  "nodes": [
+    { "v": "a", "value": { "width": 60, "height": 40 } },
+    { "v": "b", "value": { "width": 60, "height": 40 } }
+  ],
+  "edges": [
+    { "v": "a", "w": "b", "value": { "minlen": 1, "weight": 1 } }
+  ]
+}
+----
+
+After layout, the same structure comes back with positions filled into the labels
+(`x`/`y` on nodes, `points` on edges, `width`/`height` on the graph) — *output*:
+
+[source,json]
+----
+{
+  "options": { "directed": true, "multigraph": false, "compound": false },
+  "value": { "rankdir": "LR", "width": 180, "height": 40 },
+  "nodes": [
+    { "v": "a", "value": { "width": 60, "height": 40, "x": 30,  "y": 20 } },
+    { "v": "b", "value": { "width": 60, "height": 40, "x": 150, "y": 20 } }
+  ],
+  "edges": [
+    { "v": "a", "w": "b",
+      "value": { "minlen": 1, "weight": 1,
+                 "points": [ {"x":60,"y":20}, {"x":90,"y":20}, {"x":120,"y":20} ] } }
+  ]
+}
+----
+
+* Node `x`/`y` is the node *centre*. All coordinates are pixels, origin top-left.
+* dagre runs the layout in place; this document only fixes the *shape* the positions
+  travel in.
+
+.See also
+* https://github.com/dagrejs/graphlib/blob/master/lib/json.ts[`graphlib/lib/json.ts`] — the serialisation source
+* https://github.com/dagrejs/dagre/wiki[dagre wiki] — the meaning of the layout attributes
+* `xref:spec-kvizle-api.adoc[]` — the Kvizle superset of this structure

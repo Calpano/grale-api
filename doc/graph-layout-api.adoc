@@ -1,0 +1,1008 @@
+= Kvizle API
+Dr. Max Völkel <mv@maxvoelkel.de>
+:revdate: 2026-06-15
+:revnumber: 0.12
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 3
+:icons: font
+:source-highlighter: highlight.js
+:idprefix:
+:idseparator: -
+
+[abstract]
+Kvizle is a graph-layout API for TypeScript and a *strict superset of the dagre
+serialised JSON structure* (graphlib's `json.write` format, latest `dagrejs/graphlib`,
+carrying `dagrejs/dagre` layout attributes). Kvizle is defined as a *data format*
+— JSON in, JSON out — not as a class library. Any serialised dagre graph is a valid
+Kvizle request *unchanged*, and Kvizle only adds optional fields. On top of the dagre
+structure Kvizle adds optional capabilities the original lacks: *pinned nodes*, *focus
+nodes*, *layout stability across turns* (`prevLayouts`), *per-edge preferred directions*
+and *hidden constraint links*, *per-side node ports*, *reusable edge markers*, *n-ary
+hyperedges*, and honoured edge *weight* and *lineWidth*. Every label may carry opaque
+*`meta`* for the renderer, and it returns *layout diagnostics* (warnings, timing) that
+dagre omits.
+
+The dagre JSON baseline this document supersets is specified separately in
+`xref:dagre-js.adoc[]`; this spec describes only what Kvizle adds and how it stays
+compatible.
+
+[IMPORTANT]
+.What "strict superset" means here
+====
+Kvizle is a superset of the *JSON structure* (the keys and label fields), not of dagre's
+*pixel output*. Kvizle is a different layout engine, so for the same graph the computed
+coordinates differ from dagre's. The guarantee is:
+
+* every key of the `xref:dagre-js.adoc#the-envelope[JsonGraph envelope]` exists in Kvizle
+  with the same shape;
+* every dagre label field keeps its meaning, allowed values, and default;
+* a serialised dagre graph is accepted and produces a *valid* layout with no edits;
+* every Kvizle addition is an *optional* field — when none are present, the request
+  reduces to the dagre structure (see <<reduction-to-dagre>>).
+====
+
+== Part I — Compact reference
+
+For developers who already know dagre. Skip to <<part-ii-detailed-reference>>
+for the normative detail.
+
+=== The shape of a call
+
+Kvizle is a function from a graph JSON to a graph JSON:
+
+[source,ts]
+----
+import { layout } from 'kvizle';
+
+const out = layout(graphJson);   // KvizleGraph -> KvizleGraph (positions filled in)
+----
+
+The input is the `xref:dagre-js.adoc#the-envelope[dagre JSON envelope]`
+(`{ options, value, nodes, edges }`) with optional Kvizle fields added to the labels.
+The output is the same envelope with `x`/`y` on nodes, `points` on edges, and
+`width`/`height` on the graph label filled in.
+
+=== Feeding a dagre graph (drop-in)
+
+Any dagre/graphlib graph becomes a Kvizle request by serialising it:
+
+[source,ts]
+----
+import * as graphlib from '@dagrejs/graphlib';
+import { layout } from 'kvizle';
+
+const out = layout(graphlib.json.write(g));   // serialise dagre graph -> Kvizle
+const g2  = graphlib.json.read(out);          // back to a graph, positions in the labels
+----
+
+No code change to how the graph was *built* — only the layouter at the end differs.
+
+=== A dagre request (unchanged)
+
+[source,json5]
+----
+{
+  "options": { "directed": true, "multigraph": false, "compound": false },
+  "value": { "rankdir": "LR" },
+  "nodes": [
+    { "v": "a", "value": { "width": 60, "height": 40 } },
+    { "v": "b", "value": { "width": 60, "height": 40 } }
+  ],
+  "edges": [
+    { "v": "a", "w": "b", "value": { "minlen": 1, "weight": 1 } }
+  ]
+}
+----
+
+This is a plain `xref:dagre-js.adoc[]` document — Kvizle lays it out and returns the same
+structure with positions filled in.
+
+=== The three extensions in one request
+
+[source,json5]
+----
+{
+  "options": { "directed": true, "multigraph": false, "compound": false },
+  "value": {
+    "rankdir": "TB",
+    "stability": 0.8                          // (2) honour previous node positions
+  },
+  "nodes": [
+    { "v": "ceo", "value": { "width": 80, "height": 40, "x": 400, "y": 0, "pinned": true } },  // (1) hard pin
+    { "v": "cto", "value": { "width": 80, "height": 40 } }
+  ],
+  "edges": [
+    { "v": "cto", "w": "ceo", "value": { "prefDir": "up" } },       // (3) bias this edge up
+    { "v": "a",   "w": "b",   "value": { "prefDir": "right" } }
+  ]
+}
+----
+
+. *Pin* — `ceo` is fixed at `(400, 0)`; the layouter places everything else around it.
+. *Stability* — past positions are supplied in `prevLayouts` (omitted here — this is the
+  first turn); nodes are then kept near where they last were. `0` = free re-layout,
+  `1` = move only when forced.
+. *Preferred direction* — the `cto → ceo` edge is biased to point `up`; set the same
+  `prefDir` on every edge of a relation type to bias that whole type.
+
+=== Cheat sheet
+
+.Everything dagre's JSON has — unchanged (full detail in `xref:dagre-js.adoc[]`)
+[cols="1,3",frame=ends]
+|===
+| Location | Fields
+
+| envelope            | `options{directed,multigraph,compound}`, `nodes[]`, `edges[]`, `value`
+| node `value`        | `width`, `height` (in); `x`, `y` (out)
+| edge `value`        | `minlen`, `weight`, `labelpos`, `labeloffset` (in); `points` (out)
+| graph `value`       | `rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `margin*`, `acyclicer`, `ranker`
+|===
+
+.What Kvizle adds (all optional)
+[cols="1,1,2",frame=ends]
+|===
+| Location | Field | Meaning
+
+| envelope       | `hyperedges[]`         | n-ary edges — a set of node endpoints (GraphML-style)
+| edge/hyperedge | `id`                   | optional stable id (debugging / reference)
+| graph `value`  | `stability` `0..1`     | honour previous positions
+| graph `value`  | `prevLayouts`          | array of past `{node-id -> position}` frames (stability history)
+| graph `value`  | `focus`                | node id(s) the layout centres on
+| graph `value`  | `cornerRadius`         | round edge turns (px)
+| graph `value`  | `markers`              | marker registry (reserve endpoint space; reused like SVG defs)
+| graph `value`  | `logLevel`/`visualDebug` | debug verbosity; draw debug overlays
+| node `value`   | `pinned: boolean`      | hard-pin node at its `x`/`y` (treat them as input)
+| node `value`   | `ports`                | port counts per side `{top,left,bottom,right}`
+| node/edge `value` | `zIndex`            | draw order (higher on top; in/out)
+| edge `value`   | `prefDir`              | per-edge preferred direction `'up'\|'down'\|'left'\|'right'`
+| edge `value`   | `hidden: boolean`      | constrains layout but is not drawn
+| edge `value`   | `lineWidth`            | reserved corridor width / line width (≠ dagre label `width`)
+| edge `value`   | `fromPort` / `toPort`  | attach the edge end to a node port `{side,index}`
+| edge `value`   | `startMarker`/`endMarker` | reference a graph marker by id
+| any `value`    | `meta`                 | opaque passthrough data (renderer-side; never warns)
+| output edge    | `normals` / `crossings` | per-point path normals; unavoidable crossing positions
+| output         | `diagnostics`          | warnings, timing, displacement (dagre returns none)
+|===
+
+[[part-ii-detailed-reference]]
+== Part II — Detailed reference
+
+=== The `KvizleGraph` structure
+
+`KvizleGraph` keeps the `xref:dagre-js.adoc#the-envelope[dagre JsonGraph envelope]` intact —
+the same `options`, `nodes[]`, `edges[]`, and `value` keys, the same `{ v, w, name? }` edge
+identity, the same `parent` for compound graphs — and enriches the three *label* objects
+(`value`) with the optional fields in <<graph-label-additions>>, <<node-label-additions>>,
+and <<edge-label-additions>>. It makes two purely-additive envelope extensions: an optional
+`id` on each edge (see <<edge-id>>) and a top-level `hyperedges[]` array (see
+<<hyperedges>>). A document that uses none of these is byte-for-byte a dagre document.
+
+NOTE: In a compound graph Kvizle allows edges that *cross cluster boundaries* — including
+an edge between a node and one of its own ancestors (child ↔ parent). dagre rejects these
+(it crashes with "Cannot set property 'rank' of undefined" — issues #238, #236, #426);
+Kvizle treats a cluster boundary as permeable and routes the edge through it.
+
+=== `layout(graph)`
+
+[source,ts]
+----
+function layout(graph: KvizleGraph): KvizleGraph;
+----
+
+Pure function, JSON in / JSON out. It returns a new envelope of the same shape with the
+computed positions written into the labels:
+
+* each node `value` gets `x`, `y` — the node *centre* (pixels, origin top-left) — and a
+  computed `zIndex`;
+* each edge `value` gets `points: {x,y}[]` (a `hidden` edge gets none) with matching
+  `normals` and any `crossings`, plus `x`/`y` for the edge label when it declares label
+  `width`/`height` — see <<routing-output>>;
+* the graph `value` gets `width`, `height` — the layout bounding box;
+* the envelope gains a `diagnostics` object — warnings, timing, displacement (see
+  <<diagnostics>>).
+
+The result is itself a valid request: appending its node positions to `prevLayouts` and
+calling again is how incremental layout works — see <<respecting-previous-layouts>>.
+
+[[graph-label-additions]]
+=== Graph label additions (`value`)
+
+The dagre options (`rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `marginx`,
+`marginy`, `acyclicer`, `ranker`) are unchanged — see
+`xref:dagre-js.adoc#graph-label[the baseline]`. Kvizle adds:
+
+[cols="1,1,1,2",frame=ends]
+|===
+| Field | Type | Default | Meaning
+
+| `stability`    | number `0..1`      | `0`  | how strongly to honour previous node positions — see <<respecting-previous-layouts>>
+| `prevLayouts`  | `NodePositions[]`  | `[]` | layout history; each element is a `{ node-id -> {x,y} }` map of a past frame, ordered oldest first. A node's anchor is its position in the latest frame that contains it. See <<respecting-previous-layouts>>.
+| `focus`        | `string \| string[]` | —  | node id(s) the layout organises around — see <<focus>>
+| `cornerRadius` | number             | `0`  | round every edge turn to this radius in pixels; `0` keeps sharp corners — see <<edges-misc>>
+| `markers`      | `Record<string, MarkerDef>` | `{}` | marker registry; edges reference entries via `startMarker`/`endMarker` — see <<markers>>
+| `logLevel`     | `'DEBUG'\|'INFO'\|'WARN'\|'ERROR'` | `'WARN'` | log verbosity / diagnostics detail — see <<debug>>
+| `visualDebug`  | boolean            | `false` | include debug overlays in the output — see <<debug>>
+| `meta`         | object             | —    | opaque passthrough, ignored by the layouter — see <<meta>>
+|===
+
+`width`, `height` on the graph label remain *outputs* (the layout bounding box).
+
+[[node-label-additions]]
+=== Node label additions (`value`)
+
+The dagre node fields (`width`, `height` in; `x`, `y` out) are unchanged — see
+`xref:dagre-js.adoc#node-label[the baseline]`. Note that under Kvizle `x`/`y` are
+*also read as input* when the node is `pinned`. (Stability positions travel separately in
+`prevLayouts`, not in these fields.) Kvizle adds:
+
+[cols="1,1,2",frame=ends]
+|===
+| Field | Type | Meaning
+
+| `pinned` | boolean | hard constraint: treat this node's `x`/`y` as *input* and place its centre there, instead of computing a position. `x`/`y` must be present.
+| `ports`  | `{ top?: number; left?: number; bottom?: number; right?: number }` | number of attachment ports on each side; edges reference them by `{side,index}` — see <<ports>>
+| `zIndex` | number | draw order (in/out); higher draws on top — see <<routing-output>>
+| `meta`   | object | opaque passthrough, ignored by the layouter — see <<meta>>
+|===
+
+[[edge-label-additions]]
+=== Edge label additions (`value`)
+
+The dagre edge fields (`minlen`, `weight`, `width`, `height`, `labelpos`, `labeloffset`;
+`points`, `x`, `y` out) are unchanged — see
+`xref:dagre-js.adoc#edge-label[the baseline]`. Kvizle honours `weight` as edge
+*importance* (see <<weight-lineWidth>>) and adds:
+
+[cols="1,1,2",frame=ends]
+|===
+| Field | Type | Meaning
+
+| `prefDir`   | Direction | per-edge preferred direction (`'up' \| 'down' \| 'left' \| 'right'`) — see <<preferred-directions>>
+| `hidden`    | boolean   | edge constrains the layout (rank, order, spacing) but is not drawn — see <<hidden-links>>
+| `lineWidth` | number    | reserved corridor width / drawn line width (px); distinct from dagre's label `width` — see <<weight-lineWidth>>
+| `fromPort`    | `PortRef` | attach the edge's source end to a port `{ side, index }` — see <<ports>>
+| `toPort`      | `PortRef` | attach the edge's target end to a port `{ side, index }` — see <<ports>>
+| `startMarker` | string    | id of a graph marker placed at the source end — see <<markers>>
+| `endMarker`   | string    | id of a graph marker placed at the target end — see <<markers>>
+| `zIndex`      | number    | draw order (in/out); higher draws on top — see <<routing-output>>
+| `normals`     | `(number\|null)[]` | _out_: normal angle (rad) per `points` entry — see <<routing-output>>
+| `crossings`   | `Point[]` | _out_: positions where this edge crosses another — see <<routing-output>>
+| `meta`        | object    | opaque passthrough, ignored by the layouter — see <<meta>>
+|===
+
+=== The extensions, in detail
+
+==== Pinned nodes
+
+A *pin* is a hard positional constraint: `pinned: true` tells the layouter to treat the
+node's `x`/`y` as *input* and place its centre exactly there, rather than computing a
+position. There is one position field — `x`/`y` — and `pinned` flips it from output to
+input.
+
+[source,json5]
+----
+[
+{ "v": "ceo",  "value": { "width": 80, "height": 40, "x": 400, "y": 0, "pinned": true }},
+{ "v": "keep", "value": { "width": 60, "height": 40, "x": 120, "y": 80, "pinned": true } }
+]
+----
+
+* The node's `x`/`y` must be present; `pinned: true` without coordinates is ignored and
+  reported as a `PINNED_NO_COORDS` warning. Coordinates are the node *centre*, in pixels.
+* To pin at a chosen position, set `x`/`y` and `pinned: true`. To lock a node the user
+  dragged, replay a prior output (which already carries `x`/`y`) with `pinned: true` on
+  that node — no coordinates to copy.
+* The layouter MUST place a pinned node at its `x`/`y` and lay everything else out
+  around it.
+* If two pins resolve to the same place, the layouter honours them as closely as it can
+  and emits a `PIN_CONFLICT` warning (see <<diagnostics>>). Pins are always hard — there
+  is no silent relocation.
+
+[[respecting-previous-layouts]]
+==== Respecting previous layouts (stability)
+
+dagre is stateless: re-laying-out after adding or hiding one node can reshuffle the whole
+drawing. And a single "previous position" is not enough — over many turns a node may
+*disappear and come back* (present in turns 1–4, gone in 5–7, back in 8–10), and when it
+returns it should land where it last was. A node that has left the graph has no current
+position to anchor to.
+
+So Kvizle takes the layout *history* as an explicit input: `prevLayouts`, an array of past
+frames, each a map from node id to its centre position.
+
+[source,json5]
+----
+{
+  "value": {
+    "rankdir": "LR",
+    "stability": 0.8,
+    "prevLayouts": [
+      { "A": { "x": 120, "y": 300 }, "B": { "x": 320, "y": 300 } },   // turn 8
+      { "A": { "x": 120, "y": 300 }, "C": { "x": 520, "y": 300 } }    // turn 9 (B gone, C new)
+    ]
+  },
+  "nodes": [ { "v": "A" }, { "v": "B" }, { "v": "C" } ]               // turn 10: B is back
+}
+----
+
+* The array is ordered *oldest first*; the last element is the most recent frame.
+* A node's *anchor* is its position in the **latest frame that contains it**. In turn 10
+  above, `B` — absent since turn 8 — re-anchors near `(320, 300)`, while `A` and `C` use
+  their turn-9 positions. A node in no frame has no anchor and is placed freely.
+* The caller owns the history and its length: only frames holding currently-absent nodes
+  that might return need to be kept; everyone else is covered by the most recent frame.
+
+`stability` weights how strongly anchors are honoured:
+
+[cols="1,4",frame=ends]
+|===
+| `stability` | Behaviour
+
+| `0` (default) | free re-layout; anchors used only as a tie-breaker — dagre-like
+| `0 < s < 1`   | prefer placements close to the anchor, trading off against layout quality
+| `1`           | move a node only when its anchor is invalid or taken by a pin
+|===
+
+Each turn, append the previous output's positions and call again:
+
+[source,ts]
+----
+let history = [];                                    // NodePositions[]
+function relayout(graph) {
+  graph.value = { ...graph.value, stability: 0.8, prevLayouts: history };
+  const out = layout(graph);
+  const frame = Object.fromEntries(out.nodes.map(n => [n.v, { x: n.value.x, y: n.value.y }]));
+  history = [...history, frame];                     // newest pushed last
+  return out;
+}
+----
+
+Round-trip guarantee: laying out a graph whose nodes all have anchors in `prevLayouts`,
+with no pins, MUST reproduce those anchor positions (zero displacement) at any
+`stability`. This is the test that the incremental path does not drift.
+
+[NOTE]
+"Incremental" here means *stability*, not delta updates — the full pipeline runs each call;
+the history only biases tie-breaks.
+
+[[focus]]
+==== Focus
+
+`focus` names one or more nodes the layout should organise around — a single node id or an
+array of them:
+
+[source,json5]
+----
+[
+  { "value": { "focus": "Alice" } },
+  { "value": { "focus": ["Alice", "Bob"] } }
+]
+----
+
+* The focus set is placed centrally and the rest of the graph is laid out radiating
+  outward from it (e.g. by graph distance). With several ids, the set is centred as a
+  group.
+* A `focus` id not present in `nodes[]` is ignored with a `BAD_FOCUS` warning.
+* A layout with no notion of a centre ignores `focus` entirely.
+
+[[preferred-directions]]
+==== Preferred edge direction
+
+Real graphs mix relation kinds (`reportsTo`, `dependsOn`, `knows`) that should flow
+differently. Kvizle lets each edge declare a preferred direction:
+
+[source,json5]
+----
+{
+  "edges": [
+    { "v": "cto", "w": "ceo", "value": { "prefDir": "up" } },
+    { "v": "lib", "w": "app", "value": { "prefDir": "right" } },
+    { "v": "p",   "w": "q",   "value": { "prefDir": "down" } }
+  ]
+}
+----
+
+`Direction` is `'up' | 'down' | 'left' | 'right'`. An edge with no `prefDir` follows the
+global `rankdir` flow. To bias a whole relation type, set the same `prefDir` on every
+edge of that type — the caller knows the type, so no per-type table is needed in the API.
+
+A preference is a *bias*, not a constraint: the layouter honours it where it can
+without violating pins or acyclicity.
+
+.`prefDir` is relative to `rankdir`
+`prefDir` is authored in the default top-down frame (`rankdir: "TB"`), where `down` runs
+along the rank flow (source → target). Selecting another `rankdir` rotates the whole
+drawing, and every `prefDir` rotates with it so it keeps the same meaning relative to the
+flow. The effective on-screen direction:
+
+[cols="1,1,1,1,1",frame=ends]
+|===
+| Authored | `TB` (default) | `LR` | `BT` | `RL`
+
+| `down`  | down  | right | up    | left
+| `up`    | up    | left  | down  | right
+| `right` | right | up    | left  | down
+| `left`  | left  | down  | right | up
+|===
+
+So `prefDir: "up"` points toward the top under `TB` and toward the left under `LR` — the
+same "against the flow" bias, rotated 90° with the layout. Author prefDirs once, in the TB
+frame, and they follow `rankdir`.
+
+[[hidden-links]]
+==== Hidden links
+
+A *hidden link* is an edge that shapes the layout but is never drawn — the same idea as
+PlantUML's `-[hidden]->`. Set `hidden: true`:
+
+[source,json5]
+----
+{ "v": "yes", "w": "no", "value": { "hidden": true, "prefDir": "right" } }
+----
+
+* A hidden edge participates fully in ranking, ordering, and spacing — to the layouter it
+  is an ordinary constraint.
+* It is *not* rendered: the layouter emits no `points` for it, and the caller skips it.
+* Combined with `prefDir`, hidden links pin down *relative order* with no visible
+  connection. A hidden `prefDir: "right"` edge from the True branch to the False branch
+  forces True left of False (dagre issue #452); a hidden edge between two nodes that
+  should share a column keeps them aligned (issue #472). This is how Kvizle expresses
+  node-alignment without a dedicated ordering field.
+
+[[ports]]
+==== Ports
+
+By default an edge attaches at a node's centre and the router picks where it crosses the
+boundary. *Ports* fix the attachment to a named slot on a node side.
+
+Every node has four sides, named as in CSS: `top`, `left`, `bottom`, `right`. A node
+declares how many ports each side carries; a side with `k` ports has slots `0 … k-1`:
+
+[source,json5]
+----
+{ "v": "fn", "value": { "width": 80, "height": 48,
+                        "ports": { "top": 1, "bottom": 2 } } }
+----
+
+Ports run *counter-clockwise*. The side order is itself counter-clockwise
+(`top → left → bottom → right`), and within each side the index increases along that same
+sweep, so every port forms one continuous CCW ring around the node:
+
+[cols="1,3",frame=ends]
+|===
+| Side | Slot `0 … k-1` runs
+
+| `top`    | right edge → left edge
+| `left`   | top → bottom
+| `bottom` | left edge → right edge
+| `right`  | bottom → top
+|===
+
+An edge *may* link either end to a port via `fromPort` / `toPort`, each a
+`{ side, index }`:
+
+[source,json5]
+----
+{ "v": "fn", "w": "log",
+  "value": { "fromPort": { "side": "bottom", "index": 0 },
+             "toPort":   { "side": "top",    "index": 0 } } }
+----
+
+* `fromPort` binds the source end, `toPort` the target end; either or both may be omitted,
+  leaving that end to attach at the centre as before.
+* `index` must be in range for the side's declared count, else a `BAD_PORT` warning and
+  that end falls back to centre attachment.
+* The layouter spaces the slots along the side and routes the edge to them.
+
+Ports have no dagre equivalent.
+
+[[weight-lineWidth]]
+==== Edge weight and lineWidth
+
+Two independent edge scalars that dagre either ignores or overloads:
+
+`weight`:: *Importance.* A dagre field (default `1`) whose effect dagre's own users report
+seeing none of (issue #468). Kvizle honours it: higher-weight edges are kept shorter and
+straighter and win ties in node ordering — weight is how you say "this edge matters most,
+route it first." A `weight` of `0` is special: the edge is still *drawn* but does **not**
+constrain rank assignment or ordering — Graphviz's `constraint=false` (issues #110, #112).
+So `hidden` and `weight: 0` are opposite corners: `hidden` constrains without drawing,
+`weight: 0` draws without constraining.
+`lineWidth`:: *Reserved space.* The drawn line width in pixels and the corridor the
+router keeps clear for the edge, so thick edges don't collide with neighbours. A Kvizle
+addition: dagre's edge `width` / `height` are the *label* box size, not the line, so the
+new name avoids the clash.
+
+[source,json5]
+----
+{ "v": "a", "w": "b", "value": { "weight": 5, "lineWidth": 4 } }
+----
+
+[[edges-misc]]
+==== Self-loops and corner rounding
+
+* *Self-loops.* An edge whose `v` and `w` are the same node (`v === w`) is allowed and
+  drawn as a loop on one of the node's sides; it may bind a `fromPort` / `toPort` like any
+  other edge. (dagre mishandles self-loops in clusters — issue #120.)
+* *Corner rounding.* Kvizle draws a single edge style — routed poly-lines, not a choice of
+  orthogonal vs spline (issues #111, #136). The graph-level `cornerRadius` is the one knob:
+  it rounds every edge turn to that radius in pixels, `0` (default) leaving sharp corners.
+
+[[markers]]
+==== Markers
+
+An edge end may carry a *marker* — an arrowhead, a circle, a custom glyph. Markers are
+declared once in a graph-level registry and referenced by id, like SVG `<defs>`:
+
+[source,json5]
+----
+{
+  "value": {
+    "markers": {
+      "arrow":  { "width": 12, "height": 10 },
+      "dot":    { "width": 8,  "height": 8  }
+    }
+  },
+  "edges": [
+    { "v": "a", "w": "b", "value": { "endMarker": "arrow" } },
+    { "v": "c", "w": "d", "value": { "startMarker": "dot", "endMarker": "arrow" } }
+  ]
+}
+----
+
+* A `MarkerDef` declares the *rectangular space* the marker occupies: `width` along the
+  edge, `height` across it (pixels). The layouter reserves this box at the edge end and
+  shortens the routed line so it stops at the marker's dock point — the marker never
+  overlaps the node or crowds its neighbours.
+* `dock` is the side of the marker box that meets the line; it defaults to `right`, so the
+  marker sits *back along the edge* from its attachment point — the canonical SVG-marker
+  orientation, pointing in the direction of travel.
+* `startMarker` / `endMarker` reference a marker id; the same definition is reused by every
+  edge that names it — define once, apply many.
+* An edge naming an undeclared id is laid out without that marker and a `BAD_MARKER`
+  warning is emitted.
+
+Because markers consume space they are a *layout* input, not a pure rendering detail: the
+reserved box is why an edge's `points` already stop short of the node by the marker depth.
+The marker's *appearance* (its path, fill, colour) lives renderer-side — see <<meta>>.
+
+[[meta]]
+==== Opaque metadata (`meta`)
+
+Any label — graph, node, or edge — may carry a `meta` object of arbitrary data. The
+layouter never reads it, never lets it affect geometry, and returns it untouched. It is the
+sanctioned home for everything that is the *renderer's* business: colours, label text, node
+`types`, dash patterns, sublabels, tooltips, marker glyph shapes.
+
+[source,json5]
+----
+{ "v": "a", "w": "b",
+  "value": { "endMarker": "arrow",
+             "meta": { "color": "#444", "label": "knows", "dashed": true } } }
+----
+
+`meta` keeps renderer data clear of <<diagnostics>>: a stray field *outside* `meta` is
+flagged `UNKNOWN_FIELD` (likely a typo), while anything *inside* `meta` passes through
+silently. It is how Kvizle carries arbitrary per-element data — colours, label text, types,
+dash patterns — without the layouter needing to understand any of it.
+
+[[routing-output]]
+==== Waypoint normals, crossings, and z-order
+
+Three result enrichments Kvizle produces that dagre cannot. `normals` and
+`crossings` are *output only* — you never set them; `zIndex` you may.
+
+[source,json5]
+----
+// output fragment for one edge
+{ "v": "a", "w": "b",
+  "value": { "points":    [ {"x":60,"y":20}, {"x":90,"y":20}, {"x":120,"y":20} ],
+             "normals":   [ 1.5708, 1.5708, 1.5708 ],
+             "crossings": [ {"x":90,"y":20} ],
+             "zIndex":    2 } }
+----
+
+`normals`:: An array aligned index-for-index with dagre's `points`: the path's
+outward-normal angle in radians at each point, or `null` where undefined. Renderers use it
+to orient `startMarker` / `endMarker` and to offset edge labels off the line — dagre gives
+`points` but no tangent, so markers otherwise have to guess.
+`crossings`:: The pixel positions where this edge *unavoidably* crosses another. Kvizle
+routes to minimise crossings and reports the residue, so the renderer can draw crossing
+shadows or bridges exactly where they occur — the recurring "reduce overlapping edges" ask
+dagre can't answer (issues #145, #211, #246, #281).
+`zIndex`:: Draw order on a node or edge `value`; higher sits on top. Optional *input* — set
+it to force stacking — otherwise the layouter computes one (nested nodes above their
+clusters, a crossing-over link above the crossed). Echoed on output either way.
+
+[[edge-id]]
+==== Edge and hyperedge `id`
+
+Any edge or hyperedge may carry an optional `id` string. Kvizle does not use it for layout
+— it is echoed untouched — but it makes edges addressable for debugging, logging, and
+cross-referencing (a binary edge's structural identity is otherwise just its `(v, w, name)`
+triple). `id` sits on the edge / hyperedge *object*, beside `value`:
+
+[source,json5]
+----
+{ "v": "a", "w": "b", "id": "e_42", "value": { ... } }
+----
+
+It is a Kvizle envelope extension; dagre and `graphlib.json` ignore it.
+
+[[hyperedges]]
+==== Hyperedges
+
+A *hyperedge* connects a *set* of nodes rather than a pair — the same distinction GraphML
+draws between `<edge>` and `<hyperedge>`. Binary `edges[]` stay exactly as dagre defines
+them; hyperedges live in their own top-level array:
+
+[source,json5]
+----
+{
+  "nodes": [ /* ... */ ],
+  "edges": [ { "v": "a", "w": "b" } ],          // binary, dagre
+  "hyperedges": [
+    {
+      "id": "booking_82648",                     // optional (debugging / reference)
+      "endpoints": [
+        { "node": "traveler", "marker": "arrow", "port": { "side": "right", "index": 0 } },
+        { "node": "London" },
+        { "node": "Paris", "marker": "dot" }
+      ],
+      "value": { "weight": 2, "lineWidth": 2, "prefDir": "right", "zIndex": 1,
+                 "meta": { "type": "booking" } }
+    }
+  ]
+}
+----
+
+* `endpoints` is an *unordered set* of `{ node, marker?, port? }`. `marker` is an id into
+  the graph `markers` registry (placed at that node end); `port` docks the spoke to a node
+  port, exactly like a binary edge's `fromPort` / `toPort`. A bad marker / port id yields a
+  `BAD_MARKER` / `BAD_PORT` warning; a missing node yields `DANGLING_EDGE`.
+* `value` carries the *same* whole-edge properties as a binary edge — `weight`, `hidden`,
+  `lineWidth`, `prefDir`, `labelpos`, `zIndex`, `meta`, … The per-*end* binary fields
+  (`startMarker`/`endMarker`, `fromPort`/`toPort`, `points`/`normals`/`crossings`) do not
+  apply; their job is done by the per-endpoint `marker`/`port` and by the output `tree`.
+* `id` is optional and also allowed on binary edges (see <<edge-id>>).
+
+===== Routing output: the point-tree
+
+Routing a hyperedge yields a *tree*, not a polyline — a binary edge's `points` is just the
+degenerate single-path case. The result is written to `value.tree`:
+
+[source,json5]
+----
+"value": {
+  "tree": {
+    "points": [
+      { "kind": "endpoint", "node": "traveler", "x": 120, "y": 80, "marker": "arrow" },  // 0
+      { "kind": "branch",   "x": 200, "y": 140 },                                         // 1
+      { "kind": "bend",     "x": 200, "y": 200 },                                         // 2
+      { "kind": "crossing", "x": 240, "y": 200 },                                         // 3
+      { "kind": "endpoint", "node": "London", "x": 300, "y": 200 },                       // 4
+      { "kind": "endpoint", "node": "Paris",  "x": 200, "y": 260 }                        // 5
+    ],
+    "segments": [
+      { "ends": [0,1], "normals": [0.0,    1.5708] },
+      { "ends": [1,2], "normals": [1.5708, 1.5708] },
+      { "ends": [2,3], "normals": [0.0,    0.0   ] },
+      { "ends": [3,4], "normals": [0.0,    3.1416] },
+      { "ends": [1,5], "normals": [4.7124, 1.5708] }   // branch 1's third arm
+    ]
+  }
+}
+----
+
+`points`:: every routed point, each tagged by `kind`:
+`endpoint`::: degree-1, sits at a node — carries `node` and the echoed `marker`;
+`branch`::: degree ≥ 3 — a junction (Steiner point) where the tree splits;
+`bend`::: degree-2 corner;
+`crossing`::: degree-2 point where this hyperedge crosses another link (the hyperedge
+analogue of an edge's `crossings`).
+`segments`:: the tree edges, each `{ ends: [i, j], normals: [ni, nj] }` — the two point
+indices it joins, plus the tangent normal (rad) at each end (`ni` as the segment leaves `i`
+toward `j`, `nj` as it leaves `j` toward `i`). A tree over N points has N − 1 segments; the
+topology may branch arbitrarily.
+
+Normals live on *segment ends*, not on points, so every point kind is handled the same way —
+look up the segments incident to a point and read their end-normals:
+
+* an `endpoint` (degree 1) lies on one segment → its single end-normal orients the marker;
+* a `bend` / `crossing` (degree 2) lies on two segments → two end-normals (for a crossing,
+  both run along the through-line);
+* a `branch` (degree ≥ 3) lies on _k_ segments → _k_ end-normals, one per arm, and each
+  segment's *other* endpoint says which neighbour that arm leads to.
+
+`cornerRadius` rounds `bend` and `branch` corners just as it does binary-edge turns.
+
+[[debug]]
+==== Debug settings
+
+Two optional graph-level switches for development:
+
+`logLevel`:: `'DEBUG' | 'INFO' | 'WARN' | 'ERROR'`, default `'WARN'`. Sets how chatty the
+layouter is — it filters the messages the engine logs and how much detail lands in
+`diagnostics`: `DEBUG` adds informational notes, `ERROR` keeps only failures.
+`visualDebug`:: boolean, default `false`. When `true`, the result carries extra debug
+geometry a renderer can draw on top of the layout — the routing grid, node bounding boxes,
+waypoint normals, reserved marker / port boxes. Off, the output has none of it.
+
+[source,json5]
+----
+{ "value": { "logLevel": "DEBUG", "visualDebug": true } }
+----
+
+[[diagnostics]]
+==== Diagnostics (output)
+
+dagre returns nothing when something is off — a dangling edge or an impossible
+constraint just silently skews the drawing. Kvizle attaches a `diagnostics` object to
+every result so callers can see what happened:
+
+[source,json5]
+----
+{
+  "diagnostics": {
+    "elapsedMicros": 1843,
+    "warnings": [
+      { "code": "DANGLING_EDGE", "message": "edge a->z references missing node 'z'",
+        "edge": { "v": "a", "w": "z" } }
+    ],
+    "displacement": { "moved": 2, "totalDx": 34, "totalDy": 0 }
+  }
+}
+----
+
+`warnings`:: Array, empty on a clean run. Each entry is `{ code, message, node?, edge? }`.
+
+[cols="1,3",frame=ends]
+|===
+| Code | Meaning
+
+| `DANGLING_EDGE`    | an edge references a node id that is not in `nodes[]`
+| `PIN_CONFLICT`     | two pinned nodes resolve to the same position; honoured as closely as possible
+| `PINNED_NO_COORDS` | a node has `pinned: true` but no `x`/`y`; the pin is ignored
+| `BAD_PORT`         | a `fromPort`/`toPort` index is out of range; the end falls back to centre attachment
+| `BAD_MARKER`       | an edge references a `startMarker`/`endMarker` id not in the graph `markers` registry; the marker is dropped
+| `BAD_FOCUS`        | a `focus` id is not in `nodes[]`; it is ignored
+| `UNKNOWN_FIELD`    | a label carries a field Kvizle does not recognise (likely a typo); it is ignored
+|===
+
+Unknown fields are *ignored* (dagre-compatible — labels are open objects), but each one is
+surfaced as an `UNKNOWN_FIELD` warning. A mistyped option — a recurring dagre complaint
+where settings silently do nothing (issues #461, #310, #161) — becomes visible instead of
+vanishing. Intentional passthrough data belongs under `meta` (see <<meta>>), which is never
+reported.
+
+`elapsedMicros`:: Layout wall-time in microseconds. Excluded from the determinism
+guarantee — everything else in the output is a pure function of the input.
+
+`displacement`:: Present when `prevLayouts` was honoured (`stability > 0` and a non-empty
+history): `moved` is the number of nodes that moved from their anchor, `totalDx` /
+`totalDy` the aggregate drift. A quality metric for incremental layout, and a debounce
+signal for UI animation.
+
+[[reduction-to-dagre]]
+=== Reduction to dagre
+
+Kvizle reduces exactly to the dagre structure when none of the additions are present.
+Formally, for a request where:
+
+* no node `value` has `pinned` or `ports`,
+* the graph `value` has no `stability` (or `0`), no `prevLayouts`, no `focus`, no `cornerRadius` (or `0`), no `markers`, no `logLevel`, and no `visualDebug`,
+* no edge `value` has `prefDir`, `hidden`, `lineWidth`, `fromPort`, `toPort`, `startMarker`, `endMarker`, or `weight: 0`,
+* there are no self-loops,
+* there are no `hyperedges`, and no edge carries an `id`,
+
+the document is a plain `xref:dagre-js.adoc[]` JsonGraph: same keys, same label fields,
+same meanings and defaults. (Computed coordinates may differ — Kvizle is a different
+engine — and the output additionally carries a `diagnostics` object, per-point `normals`,
+any `crossings`, and a computed `zIndex`; otherwise the structure and result shape are
+identical. See the opening callout.)
+
+=== Determinism & coordinate model
+
+* All coordinates are `number` (IEEE-754 `f64`), in CSS pixels, origin top-left.
+* Node `x`/`y` is the node *centre*.
+* `layout` is a *pure function* of its input: equal request ⇒ equal output, except
+  `diagnostics.elapsedMicros`. No wall-clock, network, or filesystem dependence.
+* `layout` does not mutate its argument; it returns a new envelope.
+
+=== TypeScript types
+
+The dagre fields are repeated here so the Kvizle label types are self-contained; their
+authoritative semantics live in `xref:dagre-js.adoc[]`.
+
+[source,ts]
+----
+export type Direction = 'up' | 'down' | 'left' | 'right';
+
+export type Side = 'top' | 'left' | 'bottom' | 'right';
+
+export interface PortRef { side: Side; index: number; }
+
+export interface MarkerDef {
+  width: number;     // reserved space along the edge (px)
+  height: number;    // reserved space across the edge (px)
+  dock?: Side;       // side of the marker box that meets the line; default 'right'
+}
+
+export interface Point { x: number; y: number; }
+
+export type NodePositions = Record<string, Point>;   // one past frame: node id -> centre
+
+// --- graph label (JsonGraph.value) ---
+export interface GraphLabel {
+  // dagre
+  rankdir?: 'TB' | 'BT' | 'LR' | 'RL';
+  align?: 'UL' | 'UR' | 'DL' | 'DR';
+  nodesep?: number;
+  edgesep?: number;
+  ranksep?: number;
+  marginx?: number;
+  marginy?: number;
+  acyclicer?: 'greedy';
+  ranker?: 'network-simplex' | 'tight-tree' | 'longest-path';
+  width?: number;   // out
+  height?: number;  // out
+  // Kvizle
+  stability?: number;                          // 0..1, default 0
+  prevLayouts?: NodePositions[];               // layout history, oldest first; newest last
+  focus?: string | string[];                   // node id(s) the layout centres on
+  cornerRadius?: number;                       // round edge turns (px), default 0
+  markers?: Record<string, MarkerDef>;         // marker registry (SVG-defs style)
+  logLevel?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';  // log verbosity, default 'WARN'
+  visualDebug?: boolean;                       // include debug overlays in output
+  meta?: Record<string, unknown>;              // opaque passthrough
+}
+
+// --- node label (JsonNode.value) ---
+export interface NodeLabel {
+  // dagre
+  width?: number;
+  height?: number;
+  x?: number;   // out (also in, when pinned)
+  y?: number;
+  // Kvizle
+  pinned?: boolean;   // treat x/y as input (hard pin) rather than output
+  ports?: { top?: number; left?: number; bottom?: number; right?: number };  // ports per side
+  zIndex?: number;                  // draw order (in/out)
+  meta?: Record<string, unknown>;   // opaque passthrough
+}
+
+// --- edge label (JsonEdge.value) ---
+export interface EdgeLabel {
+  // dagre
+  minlen?: number;
+  weight?: number;
+  width?: number;
+  height?: number;
+  labelpos?: 'l' | 'c' | 'r';
+  labeloffset?: number;
+  points?: Point[];  // out
+  x?: number;        // out
+  y?: number;        // out
+  // Kvizle
+  prefDir?: Direction;
+  hidden?: boolean;      // constrains layout but not drawn (no output points)
+  lineWidth?: number;    // reserved corridor width / line width (px), != dagre label width
+  fromPort?: PortRef;    // attach source end to a node port
+  toPort?: PortRef;      // attach target end to a node port
+  startMarker?: string;  // id into GraphLabel.markers
+  endMarker?: string;    // id into GraphLabel.markers
+  zIndex?: number;       // draw order (in/out)
+  normals?: (number | null)[];   // out: normal angle (rad) per points[] entry
+  crossings?: Point[];           // out: where this edge crosses another
+  meta?: Record<string, unknown>;   // opaque passthrough
+}
+
+// --- diagnostics (output only) ---
+export interface Warning {
+  code: 'DANGLING_EDGE' | 'PIN_CONFLICT' | 'PINNED_NO_COORDS' | 'BAD_PORT' | 'BAD_MARKER' | 'BAD_FOCUS' | 'UNKNOWN_FIELD' | string;
+  message: string;
+  node?: string;
+  edge?: { v: string; w: string; name?: string };
+}
+
+export interface Diagnostics {
+  elapsedMicros: number;                                              // excluded from determinism
+  warnings: Warning[];                                               // empty on a clean run
+  displacement?: { moved: number; totalDx: number; totalDy: number };  // when stability honoured
+}
+
+// --- hyperedges (n-ary) ---
+export interface Endpoint {
+  node: string;        // node id
+  marker?: string;     // id into GraphLabel.markers, placed at this end
+  port?: PortRef;      // dock this spoke to a node port
+}
+
+export type HyperedgePointKind = 'endpoint' | 'branch' | 'bend' | 'crossing';
+
+export interface HyperedgePoint {
+  kind: HyperedgePointKind;
+  x: number; y: number;
+  node?: string;            // out: set on 'endpoint' points
+  marker?: string;          // out: echoed on 'endpoint' points
+}
+
+export interface HyperedgeSegment {
+  ends: [number, number];      // point indices [i, j]
+  normals: [number, number];   // tangent normal (rad) leaving i->j and j->i
+}
+
+export interface HyperedgeTree {            // out
+  points: HyperedgePoint[];
+  segments: HyperedgeSegment[];             // tree edges; normals live on the ends
+}
+
+export interface HyperedgeLabel {
+  // shared with EdgeLabel (whole-hyperedge)
+  minlen?: number; weight?: number; hidden?: boolean; lineWidth?: number;
+  prefDir?: Direction; labelpos?: 'l' | 'c' | 'r'; labeloffset?: number;
+  zIndex?: number; meta?: Record<string, unknown>;
+  // output
+  tree?: HyperedgeTree;
+  x?: number; y?: number;                   // label centre (out)
+}
+
+export interface Hyperedge {
+  id?: string;                 // optional identity (debugging / reference)
+  endpoints: Endpoint[];       // unordered set of { node, marker?, port? }
+  value?: HyperedgeLabel;
+}
+
+// --- the envelope (superset of graphlib JsonGraph) ---
+export interface KvizleGraph {
+  options: { directed: boolean; multigraph: boolean; compound: boolean };
+  value?: GraphLabel;
+  nodes: { v: string; value?: NodeLabel; parent?: string }[];
+  edges: { v: string; w: string; name?: string; id?: string; value?: EdgeLabel }[];
+  hyperedges?: Hyperedge[];
+  diagnostics?: Diagnostics;   // out
+}
+
+export function layout(graph: KvizleGraph): KvizleGraph;
+----
+
+.See also
+* `xref:dagre-js.adoc[]` — the dagre serialised JSON baseline this spec supersets
+* https://github.com/dagrejs/dagre/wiki[dagre wiki] · https://github.com/dagrejs/graphlib/wiki/API-Reference[graphlib API reference]
+
+=== Compatibility matrix
+
+[cols="2,1,3",frame=ends]
+|===
+| Capability | Status | Note
+
+| `JsonGraph` envelope (`options`/`nodes`/`edges`/`value`) | ✅ full | same keys, same shape
+| graph label options                | ✅ full | same names, values, defaults
+| node `width`/`height`/`x`/`y`      | ✅ full |
+| edge `minlen`/`weight`/`labelpos`/`labeloffset`/`points` | ✅ full |
+| compound (nested) graphs           | ✅ full | node `parent`
+| multigraph (parallel edges)        | ✅ full | edge `name`
+| `graphlib.json.write` interop      | ✅ full | serialised dagre graph is a valid request
+| pinned nodes                       | ➕ added | not in dagre
+| focus node(s) (single or set)      | ➕ added | dagre has none
+| stability / previous layout        | ➕ added | not in dagre
+| per-edge preferred direction       | ➕ added | not in dagre
+| hidden constraint links            | ➕ added | not in dagre (cf. PlantUML `-[hidden]->`)
+| non-constraining edges (`weight: 0`) | ➕ added | drawn but ignored for rank (Graphviz `constraint=false`)
+| node ports (4 sides, CCW)          | ➕ added | not in dagre
+| edge `weight` honoured / `lineWidth` | ➕ added | dagre ignores weight; no line width
+| `cornerRadius` edge rounding       | ➕ added | not in dagre
+| self-loops (`v === w`)             | ➕ added | drawn as a loop; dagre buggy in clusters
+| cross-cluster / child↔parent edges | ➕ added | dagre crashes
+| reusable edge markers (registry)   | ➕ added | dagre has none
+| n-ary hyperedges                   | ➕ added | dagre is binary-only (cf. GraphML `<hyperedge>`)
+| edge / hyperedge `id`              | ➕ added | dagre identity is `(v,w,name)`
+| opaque `meta` passthrough          | ➕ added | renderer data; never affects layout
+| waypoint normals (output)          | ➕ added | dagre gives `points` only, no tangent
+| edge crossings (output)            | ➕ added | minimised, with the residue reported
+| z-order (`zIndex`)                 | ➕ added | dagre has none
+| diagnostics / warnings on output   | ➕ added | dagre returns none
+| debug toggles (`logLevel`, `visualDebug`) | ➕ added | dagre has none
+|===

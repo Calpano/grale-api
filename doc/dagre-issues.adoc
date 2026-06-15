@@ -1,0 +1,3790 @@
+= dagre — open issues (snapshot)
+Dr. Max Völkel <mv@maxvoelkel.de>
+:revdate: 2026-06-15
+:toc: left
+:toclevels: 2
+
+[abstract]
+Snapshot of all 170 open issues in https://github.com/dagrejs/dagre[dagrejs/dagre], pulled for design inspiration for `xref:spec-kvizle-api.adoc[Kvizle]`. Sorted by comment count (engagement proxy). Bodies are verbatim; long ones truncated.
+
+== Label distribution
+
+[cols="3,1",frame=ends]
+|===
+| Label | Count
+
+| `enhancement` | 3
+| `cluster` | 3
+| `bug` | 2
+|===
+
+== Issues
+
+[[issue-234]]
+=== #234 — Cannot set property 'order' of undefined
+
+_none_ | comments: 45 | created: 2018-03-07 | https://github.com/dagrejs/dagre/issues/234
+
+....
+Greetings. I am seeing the following error:
+
+```
+TypeError: Cannot set property 'order' of undefined
+    at dagre.core.js:1395
+    at arrayEach (lodash.js:1289)
+    at Function.<anonymous> (lodash.js:3345)
+    at dagre.core.js:1394
+    at arrayEach (lodash.js:1289)
+    at Function.<anonymous> (lodash.js:3345)
+    at assignOrder (dagre.core.js:1393)
+    at order (dagre.core.js:1371)
+    at dagre.core.js:495
+    at notime (dagre.core.js:2897)
+```
+
+After doing some debugging I see the following:
+
+```
+function assignOrder(g, layering) {
+  _.each(layering, function(layer) {
+    _.each(layer, function(v, i) {
+        g.node(v).order = i;
+    });
+  });
+}
+```
+
+In this function `layer` is an array, seemingly containing strings (maybe id's). When this error crops up, it seems that several items in the `layer` array are `undefined`. Therefore `g.node(undefined)` also returns undefined and produces the error.
+
+I am currently going through our code to see what might be causing the issue, but was hoping that maybe the authors had some insight into what I might look for.
+....
+
+[[issue-13]]
+=== #13 — Clustering support
+
+`enhancement` | comments: 32 | created: 2012-10-14 | https://github.com/dagrejs/dagre/issues/13
+
+....
+This involves a couple of changes, which we may want to break out into separate tickets:
+- Adding subgraph support to the parser
+- Making changes to enable cluster layout during the order and positioning phases
+....
+
+[[issue-492]]
+=== #492 — Build failing after update to v2.0.0
+
+_none_ | comments: 29 | created: 2025-11-21 | https://github.com/dagrejs/dagre/issues/492
+
+....
+Here is the output from the build:
+
+```
+vite build
+
+vite v7.2.4 building client environment for production...
+✓ 1267 modules transformed.
+src/components/messages/FlowDiagram/useLayout.ts:1:19 - error TS7016: Could not find a declaration file for module '@dagrejs/dagre'. '/Users/xxxxx/Projects/xxxxxxx/src/Frontend/node_modules/@dagrejs/dagre/dist/dagre.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/dagrejs__dagre` if it exists or add a new declaration (.d.ts) file containing `declare module '@dagrejs/dagre';`
+
+1 import dagre from "@dagrejs/dagre";
+```
+....
+
+[[issue-238]]
+=== #238 —  Unable to draw an edge from a child to parent compound graph
+
+_none_ | comments: 12 | created: 2018-03-26 | https://github.com/dagrejs/dagre/issues/238
+
+....
+Hi all,
+
+I am currently using Dagre for one of my data visualisation project, it is a compound graph which requires a node to contain a nested node, I'm unable to draw edges from child nodes to parent nodes, I get the following error:
+
+Uncaught TypeError: Cannot set property ‘rank’ of undefined.
+
+Please also see the below code:
+
+`g.setNode('a', {label: 'A'});`
+`g.setNode('b', {label: 'B'});`
+`g.setNode('c', {label: 'C'});`
+`g.setNode('d', {label: 'D'});`
+
+`g.setNode('top_group', {label: 'Top Group', clusterLabelPos: 'bottom', style: 'fill: #ffd47f'});`
+`g.setNode('bottom_group', {label: 'Group', clusterLabelPos: 'top', style: 'fill: #d3d7e8'});`
+
+`// Set the parents to define which nodes belong to which cluster`
+`g.setParent('a', 'top_group');`
+`g.setParent('b', 'bottom_group');`
+`g.setParent('c', 'bottom_group');`
+`g.setParent('d', 'bottom_group');`
+
+`// Draw edges`
+`g.setEdge('a', 'b');`
+`g.setEdge('b', 'c');`
+`g.setEdge('b', 'd');`
+
+`// Set edge from child to parent`
+`g.setEdge('a', 'bottom_group'); // THIS LINE CAUSES THE ABOVE ERROR`
+
+The way how we create a parent is the same as how we create a child node, so the library should allow us to draw an edge from a child node to a parent node.
+
+Can someone please advice?
+
+This is really urgent so can someone please help.
+
+Much appreciated,
+Thanks,
+Michael
+....
+
+[[issue-189]]
+=== #189 — Node/Edge ordering issue
+
+_none_ | comments: 11 | created: 2015-09-29 | https://github.com/dagrejs/dagre/issues/189
+
+....
+Im having an issue with keeping a consistent ordering of nodes/edges in my graph.  The images below show how an extra node in the graph seems to completely change the ordering.
+
+<img width="617" alt="screen shot 2015-09-29 at 19 20 34" src="https://cloud.githubusercontent.com/assets/643153/10174049/98234838-66df-11e5-98f8-467e992287fc.png">
+
+<img width="652" alt="screen shot 2015-09-29 at 19 20 43" src="https://cloud.githubusercontent.com/assets/643153/10174052/9bfbd04c-66df-11e5-964b-6dccd3cc15ac.png">
+
+I am making sure that i use the same order for edges and nodes in each render, and I'm checking the init-order method and it seems to be ranking them in the correct order there, but somewhere it seems to be changing and i can't figure out why. i have checked out a few of the discussions about clustering and other order related issues, but can't see any solution.
+
+I also didn't seem to get this with an older version, but i can't remember which version it was.
+
+Any help would be much appreciated
+....
+
+[[issue-112]]
+=== #112 — Controling the order of outgoing edges
+
+_none_ | comments: 11 | created: 2014-02-21 | https://github.com/dagrejs/dagre/issues/112
+
+....
+From @bzaborow:
+
+Hi,
+
+I started to use the dagre-d3 for visualisation of data similar to one of examples (the Sentence Tokenization). Extending this example to display a DAG instead of a tree was super easy, but I've lost control of an order in which edges leave a particular node. Is it possible to restrict it somehow? If not, could you point me where to start looking into your code? For my data the order of edges is quite important.
+
+In fact, it would be the best if i could constraint nodes order too (position from left to right in top down graph), but as I understand, it is not possible at the moment (issue cpettitt/dagre-d3#25 ?).
+
+Thanks
+....
+
+[[issue-188]]
+=== #188 — What is a good replacement?
+
+_none_ | comments: 10 | created: 2015-08-07 | https://github.com/dagrejs/dagre/issues/188
+
+....
+Since this project no longer being actively developed, what is a good replacement?
+....
+
+[[issue-145]]
+=== #145 — Undesired overlapping edges
+
+_none_ | comments: 10 | created: 2014-09-16 | https://github.com/dagrejs/dagre/issues/145
+
+....
+Not sure if this a bug or by design, but I'm getting overlapping edges in some of my graphs. I've pulled together a minimal test case.
+
+The following graph:
+
+```
+digraph {
+  A2 -> B1
+  A1 -> B1
+  A2 -> B2
+}
+```
+
+Is rendering with crossed edges:
+![screen shot 2014-09-16 at 3 06 55 pm](https://cloud.githubusercontent.com/assets/21952/4295801/e268d938-3ded-11e4-8cda-042ff5b96d45.png)
+http://cpettitt.github.io/project/dagre-d3/latest/demo/interactive-demo.html?graph=digraph%20{%0A%20%20A2%20-%3E%20B1%0A%20%20A1%20-%3E%20B1%0A%20%20A2%20-%3E%20B2%0A}%0A
+
+But I'd like it to render like this:
+
+```
+digraph {
+  A1 -> B1
+  A2 -> B1
+  A2 -> B2
+}
+```
+
+![screen shot 2014-09-16 at 3 07 02 pm](https://cloud.githubusercontent.com/assets/21952/4295804/e93e4216-3ded-11e4-8e86-a64b2c73364c.png)
+http://cpettitt.github.io/project/dagre-d3/latest/demo/interactive-demo.html?graph=%2F*%20Example%20*%2F%0Adigraph%20{%0A%20%20A1%20-%3E%20B1%0A%20%20A2%20-%3E%20B1%0A%20%20A2%20-%3E%20B2%0A%20%20A3%20-%3E%20B2%0A}%0A
+....
+
+[[issue-231]]
+=== #231 — unnecessary change to `pass1` and `pass2` methods in`lib/position/bk.js` file
+
+_none_ | comments: 9 | created: 2018-02-12 | https://github.com/dagrejs/dagre/issues/231
+
+....
+Check the change history of `lib/position/bk.js` file: https://github.com/dagrejs/dagre/commits/3d538f0dbfe4ad5735c88efee22af0994441c898/lib/position/bk.js
+
+![image](https://user-images.githubusercontent.com/733544/36083317-03009a36-0fec-11e8-9b21-021b828a5998.png)
+
+1.  Tried to migrate to lodash 4
+1.  Found a failed test, tried to fix it by editing `pass1` and `pass2` methods in `lib/position/bk.js` file
+1.  Fix bugs introduced in step 2, refactor code
+
+I think things started to become wrong in step 2. If a test failed, we should check what was changed recently in step 1. And step 1 didn't change any logic of `pass1` and `pass2` methods.  So we shouldn't change them in order to fix the failed test.
+
+I think the bug was introduced in this commit of step 1: https://github.com/dagrejs/dagre/commit/590b155a32159412fe5f5de0e18df6b8d99d22b9#diff-02a83e5e964e624bd848264b9729e9bd
+
+![image](https://user-images.githubusercontent.com/733544/36083468-6f63e5a6-0fed-11e8-92db-bf869146c13a.png)
+
+And we should try to edit `findSmallestWidthAlignment` method in order to fix it. The following works:
+
+![image](https://user-images.githubusercontent.com/733544/36083475-8cb5b2c4-0fed-11e8-8156-b9bf6ebe0cff.png)
+
+For a fully working project with passing tests, please check my fork of dagre:  https://github.com/tylingsoft/dagre-layout
+....
+
+[[issue-106]]
+=== #106 — port constraints
+
+_none_ | comments: 9 | created: 2013-12-13 | https://github.com/dagrejs/dagre/issues/106
+
+....
+In [NoFlo](https://github.com/noflo/noflo) (and other dataflow programming systems) nodes have named in/out ports at specified locations. What would it take to consider port locations for each edge?
+....
+
+[[issue-258]]
+=== #258 — Controlling nodes positions
+
+_none_ | comments: 8 | created: 2019-02-19 | https://github.com/dagrejs/dagre/issues/258
+
+....
+I'm currently working on a project that has been using Dagre for a long time. The lib is fantastic and always met the project needs until now but there is one new feature that i'm currently unable to implement.
+I would like to know if in the current version of the lib is there any way i can control the position of nodes to keep them aligned.
+For example:
+![image](https://user-images.githubusercontent.com/18668861/53021501-1d8b6b80-3438-11e9-846e-3f944659bfa3.png)
+I would like to keep some of the nodes in the graph above aligned like in the picture below:
+![image](https://user-images.githubusercontent.com/18668861/53021879-ee292e80-3438-11e9-938a-40ea2e4b4591.png)
+I already tried using the clustering in the Dagre-D3, but the nodes inside the cluster are still scattered:
+
+![image](https://user-images.githubusercontent.com/18668861/53037800-e7f77a00-3459-11e9-9d0b-db51f45acf6a.png)
+
+I think this would improve greatly the understanding of some graphs, even if it increased the number of crossing edges as a side effect.
+Is there anyway i can achieve that with the current version of the lib ?
+If not, how could i contribute changing the lib to achieve that ?
+....
+
+[[issue-247]]
+=== #247 — Edge drawing docs/example
+
+_none_ | comments: 8 | created: 2018-07-26 | https://github.com/dagrejs/dagre/issues/247
+
+....
+Documentation is very scarce on how to treat edge points. Is there a clear example how to render an edge using SVG `path` element?
+
+I've tried
+
+    <path d="M <p1> Q <p2> <p3> [T p4 T p5 ...]">
+
+but it's just a wild guess and i assume there is a better (correct) way of doing it.
+....
+
+[[issue-130]]
+=== #130 — Layout for a family tree
+
+_none_ | comments: 8 | created: 2014-06-27 | https://github.com/dagrejs/dagre/issues/130
+
+....
+Hi,
+
+i was evaluating dagre with dagre-d3 for creating a typical family tree (like http://www.yangfamilytaichi.com/yang/tree/images/familytree.jpg). 
+
+My test:
+http://jsfiddle.net/aJg2G/1/
+
+Basically each generation should be on the same row/line. How can i influence the layouting to archieve that?
+
+Thanks,
+
+Jens
+....
+
+[[issue-435]]
+=== #435 — How to make use of `Graph<T>` / `Node<T>` types?
+
+_none_ | comments: 7 | created: 2024-02-06 | https://github.com/dagrejs/dagre/issues/435
+
+....
+`@dagrejs/dagre` exposes eg. `Graph<T>`, `Node<T>` types while `@dagrejs/graphlib` doesn't, but it's not clear how to use these to provide extended values on a node in the graph.
+
+The node is returned using the extended `Node<T>`: https://github.com/dagrejs/dagre/blob/2216b815d33bc7933ee0105865b06fbbcc2a6a70/index.d.ts#L35
+
+But there is no way of assigning any `T` data to it in the first place? https://github.com/dagrejs/dagre/blob/2216b815d33bc7933ee0105865b06fbbcc2a6a70/index.d.ts#L43
+
+How are these meant to be used? Considering that the plain types from `@dagrejs/graphlib` are not used there is a use case I assume?
+....
+
+[[issue-359]]
+=== #359 — Maintaining custom node order in dagre layout
+
+_none_ | comments: 7 | created: 2023-09-05 | https://github.com/dagrejs/dagre/issues/359
+
+....
+Hello,
+I am currently working on a project where I'm using Dagre.js for graph layout, specifically for tree structures.
+While Dagre.js excels at automatic graph layout, I have a specific requirement that I'm finding challenging to implement: I need to enforce a specific order for the children of a tree node, such as rendering children from left to right.
+
+Dagre.js automatically arranges nodes and edges to optimize the layout, which sometimes results in nodes being placed in an order that doesn't align with my intended structure. I'm looking for a way to define and maintain the order of child nodes within a tree node using Dagre.js - I want the order of the nodes to be the same as their order in the array of nodes I provide to the dagre layout.
+
+Is there currently a feature or approach in dagre that enables such custom node ordering? If not, would it be possible to consider adding this functionality in a future release? (For reference, a similar option is available in Elk.js: 
+https://eclipse.dev/elk/reference/options/org-eclipse-elk-layered-layering-strategy.html (INTERACTIVE option) and
+https://www.eclipse.org/elk/reference/options/org-eclipse-elk-layered-crossingMinimization-forceNodeModelOrder.html)
+
+Thank you for your assistance.
+....
+
+[[issue-287]]
+=== #287 — How to make nodes align from top when they are in parallel paths
+
+_none_ | comments: 7 | created: 2020-02-28 | https://github.com/dagrejs/dagre/issues/287
+
+....
+I managed to use Dagre to auto distribute the nodes, but when there is a path split, the nodes align to the bottom rather to the top. In the screenshot below, I want the "Path B" node to be ranked the same as "Path A". How can I achieve this?
+
+![Screenshot 2020-02-28 at 10 12 10 AM](https://user-images.githubusercontent.com/10229915/75505460-2a14ad80-5a16-11ea-8c19-c2eaa1037a50.png)
+
+My settings are
+```
+{
+  rankdir: 'TB',
+  ranker: 'network-simplex',
+  marginx: 30,
+  marginy: 30,
+},
+....
+
+[[issue-201]]
+=== #201 — Maintain the structure when dynamically add nodes
+
+_none_ | comments: 7 | created: 2016-06-21 | https://github.com/dagrejs/dagre/issues/201
+
+....
+Hey there, I'm working on a project where I will append nodes dynamically when I click on the existing nodes. But it comes out that Dagre will do some "optimizations" for me, liking switching the position of the existing nodes.
+I found a similar stack overflow questions [here](http://stackoverflow.com/questions/25991825/maintaining-relative-ordering-when-adding-nodes-to-a-layered-graph-in-dagre), but it was to old, and the `dagre.layout().orderIters(-1)` method does not work. Is there some ways to work around this? I really like Dagre and don't want to switch to other libraries.
+....
+
+[[issue-446]]
+=== #446 — Nested nodes too far apart
+
+_none_ | comments: 6 | created: 2024-07-23 | https://github.com/dagrejs/dagre/issues/446
+
+....
+I'm struggling with customizing the behavior of the Dagre layout when it comes to a huge set of nodes. I'm sending you a screenshot to show what I mean. Can this be customized? Look at the very last row of nodes and how much they are separated when they should be close since there are no descendants.
+
+![Screenshot 2024-07-23 at 16 26 05](https://github.com/user-attachments/assets/ddf2aedb-83af-40f8-b9d5-e78357751897)
+....
+
+[[issue-318]]
+=== #318 — Is there any suitable alternative?
+
+_none_ | comments: 6 | created: 2021-08-04 | https://github.com/dagrejs/dagre/issues/318
+
+....
+As the repo is deprecated.
+....
+
+[[issue-278]]
+=== #278 — Align nodes
+
+_none_ | comments: 6 | created: 2019-08-28 | https://github.com/dagrejs/dagre/issues/278
+
+....
+Is it possible to specify the alignment of the node to the left side?
+I try use align: `UL, UR, DR, DL` but it's align for layout, not nodes.
+`DR, DL` not working. 
+![image](https://user-images.githubusercontent.com/11390039/63855505-3a38cb00-c9a8-11e9-87b2-9f34e52a994c.png)
+....
+
+[[issue-236]]
+=== #236 — Compound Graph: Unable to draw edge from a child node to a parent node. Error: Uncaught TypeError: Cannot set property ‘rank’ of undefined
+
+_none_ | comments: 6 | created: 2018-03-22 | https://github.com/dagrejs/dagre/issues/236
+
+....
+I’m currently using dagre.js for my visualisation graph, it’s great. But I can’t draw any edge from a child node to a parent node, if I try to do so I will get the following error: Uncaught TypeError: Cannot set property ‘rank’ of undefined.
+
+I think this is a bug, but I can’t find a way to fix this issue. The parent of a node is a node, so we should be able to draw edges to it.
+
+Can someone please help?
+
+Much appreciated,
+Michael
+....
+
+[[issue-159]]
+=== #159 — Add back support for rank constraints
+
+_none_ | comments: 6 | created: 2014-11-15 | https://github.com/dagrejs/dagre/issues/159
+
+....
+Depends on #136.
+....
+
+[[issue-296]]
+=== #296 — k.toLowerCase is not a function
+
+_none_ | comments: 5 | created: 2020-04-16 | https://github.com/dagrejs/dagre/issues/296
+
+....
+```typescript
+import React, { useState, useEffect, useRef, FC } from 'react'
+import { x6, Graph } from '@antv/x6'
+import dagre from 'dagre'
+
+const NodeData = [
+  {
+    id: 'node-1',
+    width: 100,
+    height: 150,
+    name: '推流节点'
+  },  {
+    id: 'node-2',
+    width: 100,
+    height: 150,
+    name: '拉流节点'
+  },  {
+    id: 'node-3',
+    width: 100,
+    height: 150,
+    name: '推流节点'
+  },  {
+    id: 'node-4',
+    width: 100,
+    height: 150,
+    name: '拉流节点'
+  },  {
+    id: 'third-1',
+    width: 100,
+    height: 100,
+    name: '第三方'
+  },  {
+    id: 'third-2',
+    width: 100,
+    height: 100,
+    name: '第三方'
+  },
+  {
+    id: 'tos-1',
+    width: 100,
+    height: 100,
+    name: 'Tos',
+    parent: 'region-1'
+  },
+  {
+    id: 'source-1',
+    width: 120,
+    height: 120,
+    name: '源站',
+    parent: 'region-1'
+  }, {
+    id: 'tos-2',
+    width: 100,
+    height: 100,
+    name: 'Tos',
+    parent: 'region-2'
+  }, {
+    id: 'source-2',
+    width: 120,
+    height: 120,
+    name: '源站',
+    parent: 'region-2'
+  }
+]
+
+const EdgeData = [
+  {
+    from: 'node-1',
+    to: 'source-1'
+  },  {
+    from: 'source-1',
+    to: 'node-2'
+  },  {
+    from: 'source-1',
+    to: 'source-1'
+  },  {
+    from: 'source-1',
+    to: 'third-1'
+  },  {
+    from: 'third-1',
+    to: 'tos-1'
+  }, {
+    from: 'source-1',
+    to: 'tos-1'
+  },  {
+    from: 'node-3',
+    to: 'source-2'
+  }, {
+    from: 'source-2',
+    to: 'node-4'
+  },  {
+    from: 'source-2',
+    to: 'source-2'
+  },  {
+    from: 'source-2',
+    to: 'source-1'
+  },  {
+    from: 'source-1',
+    to: 'source-2'
+  },  {
+    from: 'source-2',
+    to: 'tos-2'
+  },  {
+    from: 'source-2',
+    to: 'third-2'
+  }
+  
+]
+
+const X6Component: FC = () => {
+  const editor = useRef<Graph>();
+  const container = useRef<HTMLDivElement>();
+  const gagre = useRef<dagre.graphlib.Graph>();
+
+  useEffect(() => {
+    console.log(container.current)
+    editor.current = x6.render({
+      container: container.current
+    });
+    const gagreInstance = gagre.current = new dagre.graphlib.Graph().setGraph({}).setDefaultEdgeLabel(() => 'no label');
+    NodeData.forEach(item => {
+      gagreInstance.setNode(item.id, { label: item.name, width: item.width, height: item.height })
+    })
+    EdgeData.forEach(item => {
+      gagreInstance.setEdge(item.from, item.to)
+    })
+    dagre.layout(gagreInstance);
+    console.log(gagreInstance);
+  }, [])
+
+  return <div ref={container} />
+}
+
+export default X6Component
+
+```
+
+Hello, here is my code.But it cant work, but i dont know why.
+
+It
+
+_…(truncated; see URL)_
+....
+
+[[issue-266]]
+=== #266 — Maximum call stack size exceeded
+
+_none_ | comments: 5 | created: 2019-05-17 | https://github.com/dagrejs/dagre/issues/266
+
+....
+The DFS implementation in `longestPath` is recursive, and fails for a large graph.
+....
+
+[[issue-471]]
+=== #471 — When there are multiple nodes, sometimes the parent node is not in the center position of the child node
+
+_none_ | comments: 4 | created: 2025-02-26 | https://github.com/dagrejs/dagre/issues/471
+
+....
+```
+import Dagre from '@dagrejs/dagre';
+import { Position } from '@xyflow/react';
+
+export const useLayout = (
+  nodes,
+  edges,
+  options: {
+    direction: 'LR' | 'TB';
+    toggleNodeId: string | null;
+  },
+) => {
+  const isHorizontal = options.direction === 'LR';
+  const dagreGraph = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({
+    rankdir: options.direction,
+    nodesep: 10,
+    ranksep: 55,
+  });
+
+  edges.forEach(edge => dagreGraph.setEdge(edge.source, edge.target, { width: 15 }));
+  nodes.forEach(node =>
+    dagreGraph.setNode(node.id, {
+      ...node,
+      width: node.measured?.width ?? 0,
+      height: node.measured?.height ?? 0,
+    }),
+  );
+
+  Dagre.layout(dagreGraph);
+
+  let offsetY = 0;
+
+  return {
+    nodes: nodes.map(node => {
+      const position = dagreGraph.node(node.id);
+      const { x, y } = position;
+      if (node.id === options.toggleNodeId) {
+        offsetY = y - node.position.y;
+      }
+      return {
+        ...node,
+        targetPosition: isHorizontal ? Position.Left : Position.Top,
+        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+        position: { x, y },
+      };
+    }),
+    edges,
+    offsetY: offsetY,
+  };
+};
+
+```
+As you can see, when there are many nodes, the x and y coordinates calculated by the dark calculation method may deviate. If ```setGraph ({align:'UL '}) ```is set, this problem will not occur, but the parent node is not in the center position relative to all direct child nodes. What enhancement solutions are there, such as adding align attribute values like center? I have tried adjusting the coordinates to be in the center position based on existing algorithms, but there may be node overlap issues. Wishing to receive a response
+![Image](https://github.com/user-attachments/assets/668d3a58-1ff3-4ce6-b104-576a68b82b67)
+....
+
+[[issue-281]]
+=== #281 — Reducing overlapping edges
+
+_none_ | comments: 4 | created: 2019-09-17 | https://github.com/dagrejs/dagre/issues/281
+
+....
+Hello, I'm looking for a way to reduce overlapping edges when the graph is rendered. Even if I give an input graph with the same data for nodes and edges over and over, the graph renders differently almost every time. I want to know if there is a way to have a consistent rendering of the graph since the given data is always the same or at the very least reduce the overlapping of edges when a node is the target of multiple edges. I saw this issue request from a long time ago https://github.com/dagrejs/dagre/issues/145 and noticed that there used to be functionality to reduce edge crossing. Is there any way for this or something similar to be re-implemented?
+....
+
+[[issue-250]]
+=== #250 — Weird node placement using Cytoscape.js
+
+_none_ | comments: 4 | created: 2018-08-17 | https://github.com/dagrejs/dagre/issues/250
+
+....
+Hello there. I using Cytoscape 3.2.5 with the dagre layout. This issue was already reported in cytoscape-dagre.js, but it is related to the node positioning inside dagre.js
+
+I would like to know why this weird positioning below happens:
+![image](https://user-images.githubusercontent.com/40839466/44287492-6d983400-a243-11e8-9b10-fffe3e8cba8f.png)
+
+The nodes I talk are RRV-O and RRV-V. Is there a way to fix this?
+....
+
+[[issue-249]]
+=== #249 — Auto Layout to start diagram from centre instead of left
+
+_none_ | comments: 4 | created: 2018-08-07 | https://github.com/dagrejs/dagre/issues/249
+
+....
+Hi,
+
+Thanks for creating this plugin, I was struggling to create an auto layout for a diagram (questionnaire) which consists of nodes (div's) and edges (SVG's created using jsPlumb) but I tried code from this article http://onais-m.blogspot.com/2014/10/automatic-graph-layout-with-javascript.html
+
+```
+        function autoLayout(nodes, jsPlumbInst) {
+            // construct dagre graph from JsPlumb graph
+            var g = new dagre.graphlib.Graph();
+            g.setGraph({});
+            g.setDefaultEdgeLabel(function () { return {}; });
+
+            for (var i = 0; i < nodes.length; i++) {
+                var n = nodes[i];
+                g.setNode(n.id, { width: parseInt($(n).css('width')), height: 100 });
+            }
+
+            var edges = jsPlumbInst.getAllConnections();
+            for (var i = 0; i < edges.length; i++) {
+                var c = edges[i];
+                g.setEdge(c.source.id, c.target.id);
+            }
+
+            // calculate the layout (i.e. node positions)
+            dagre.layout(g);
+
+            // Applying the calculated layout
+            g.nodes().forEach(function (v) {
+                $("#" + v).css("left", g.node(v).x + "px");
+                $("#" + v).css("top", g.node(v).y + "px");
+            });
+        }
+```
+
+This has done the auto layout for the diagram in a nice way, but the diagram goes from left to right, but I want the diagram to start in the middle and spread left and right as required i.e. like center aligned.
+
+Please help on how to achieve this.
+....
+
+[[issue-211]]
+=== #211 — Overlapping edges
+
+_none_ | comments: 4 | created: 2017-03-03 | https://github.com/dagrejs/dagre/issues/211
+
+....
+In the following example an edge is being hidden behind another edge.   See the code in this [JSFiddle](https://jsfiddle.net/6ss0a9on/1/).
+
+<img width="250" alt="degree-hidden-edge" src="https://cloud.githubusercontent.com/assets/489291/23554587/c3d455fe-fff3-11e6-93b1-7ce8f0d3b7f1.png">
+
+If we move nodes `C`, `D`, `E`, and `F` you can see the hidden edge.
+
+<img width="250" alt="dagre-hidden-edge-2" src="https://cloud.githubusercontent.com/assets/489291/23554589/c5ab0332-fff3-11e6-8bb2-908b6a292ee0.png">
+....
+
+[[issue-165]]
+=== #165 — Getting NaN inside points array for edges
+
+_none_ | comments: 4 | created: 2014-12-02 | https://github.com/dagrejs/dagre/issues/165
+
+....
+I'm using [graphlib-dot](https://www.npmjs.org/package/graphlib-dot) for parsing out a simple graph.
+
+``` dot
+digraph testing {
+    a -> b -> c;
+    b -> d;
+}
+```
+
+When parsing the graph out, I'm getting edges that look along the lines of:
+
+``` javascript
+[{"x":25,"y":NaN},{"x":25,"y":25},{"x":25,"y":NaN}]
+[{"x":25,"y":50},{"x":0,"y":75},{"x":0,"y":NaN}]
+[{"x":25,"y":50},{"x":50,"y":75},{"x":50,"y":NaN}]
+```
+
+This is being passed into the default call to `dagre.layout()` with the graph parsed through `graphlibDot,read()`
+....
+
+[[issue-150]]
+=== #150 — Too many child nodes at the same level for a single parent node
+
+_none_ | comments: 4 | created: 2014-09-22 | https://github.com/dagrejs/dagre/issues/150
+
+....
+If a parent node have 40 child nodes, the current layout engine will put all of them in a single line.
+
+It will be very useful to setup a threshold for example 10, then Dagre can make the 40 nodes into 4 lines. The default threshold can be  as high as 100.
+....
+
+[[issue-137]]
+=== #137 — Positioning: place bends at rank extremes
+
+_none_ | comments: 4 | created: 2014-09-14 | https://github.com/dagrejs/dagre/issues/137
+
+....
+Position bends so that their coordinate is not a the center, but is at the extreme of the rank closest to the nearest node. This should reduce the cases where edges cross behind nodes on the rank where they bend.
+....
+
+[[issue-134]]
+=== #134 — Support for re-flowing graphs with dynamically-sized nodes
+
+_none_ | comments: 4 | created: 2014-08-26 | https://github.com/dagrejs/dagre/issues/134
+
+....
+If you had a graph that you wanted to interact with, then nodes could potentially be resized as you use it (e.g. by expanding or collapsing information in the node). From what I've read of the graph layout algorithm, it seems that the first two steps of the graph layout (ranking and ordering) could be kept between iterations of the algorithm. Would it be possible to add this to dagre with its current architecture?
+....
+
+[[issue-467]]
+=== #467 — unable to layout compound graph
+
+_none_ | comments: 3 | created: 2025-01-08 | https://github.com/dagrejs/dagre/issues/467
+
+....
+// code 
+const g = new dagre.graphlib.Graph({compound:true})
+  g.setGraph({ rankdir: 'TB', nodesep: 100, ranksep: 80,marginx:100,marginy:100,})
+  g.setDefaultEdgeLabel(() => ({}))
+
+  nodes.forEach((node) => {
+    const {width,height} = node.size()
+    const parentId = node?.parent?.id ?? undefined
+    if(parentId) g.setParent(node.id,parentId)
+    g.setNode(node.id, {label:`${node.id}`,width, height})
+  })
+dagre.layout(g)
+
+// console error
+chunk-YSKSNXDD.js?v=349623b9:5910 Uncaught TypeError: Cannot set properties of undefined (setting 'rank')
+
+How should I solve this problem?
+....
+
+[[issue-466]]
+=== #466 — Installing the package in Node 16 gives error
+
+_none_ | comments: 3 | created: 2024-12-12 | https://github.com/dagrejs/dagre/issues/466
+
+....
+Hey! Installed this in node 16 but getting this error. Has anyone been able to bypass this?
+
+<img width="479" alt="image" src="https://github.com/user-attachments/assets/0870c81c-2fa1-4ed2-b6ee-2e3d601e1268" />
+....
+
+[[issue-442]]
+=== #442 — Switch to ESM reverted, why?
+
+_none_ | comments: 3 | created: 2024-05-13 | https://github.com/dagrejs/dagre/issues/442
+
+....
+Why is the branch with a switch to ESM reverted?
+....
+
+[[issue-426]]
+=== #426 — Unable to setParent from a child to parent which is a group of nodes
+
+_none_ | comments: 3 | created: 2023-10-26 | https://github.com/dagrejs/dagre/issues/426
+
+....
+Hello all,
+
+I want to integrate react-flow's subflow, like screenshot. I need to draw edge from a child node to parent node which contains many sub-nodes. The error is `Cannot set parent in a non-compound graph`
+
+There are previous posts on this issue
+[Compound Graph: Unable to draw edge from a child node to a parent node. Error: Uncaught TypeError: Cannot set property ‘rank’ of undefined #236
+](https://github.com/dagrejs/dagre/issues/236)
+
+[Unable to draw an edge from a child to parent compound graph #238
+](https://github.com/dagrejs/dagre/issues/238)
+
+Do we have a solution on this? 
+<img width="801" alt="image" src="https://github.com/dagrejs/dagre/assets/71034205/5b1b2180-dc3b-4e93-884a-eba5ea49e3cb">
+....
+
+[[issue-357]]
+=== #357 — Dagre not able to draw my graph without 2 edges crossing
+
+_none_ | comments: 3 | created: 2023-08-24 | https://github.com/dagrejs/dagre/issues/357
+
+....
+https://codesandbox.io/s/pedantic-rui-jr492w?file=/nodes-edges.js
+
+<img width="724" alt="Screen Shot 2023-08-23 at 10 58 56 PM" src="https://github.com/dagrejs/dagre/assets/99215694/593376b1-931d-4c63-87bb-2fe1a9dfcb92">
+
+
+In this example here, see how node F->I crosses C->J, even though it looks like it can be avoided if J and I were swapped
+....
+
+[[issue-300]]
+=== #300 — How can I set layout options? For example, I want to change rankdir to LR.
+
+_none_ | comments: 3 | created: 2020-05-26 | https://github.com/dagrejs/dagre/issues/300
+
+....
+Hi, first of all, I want to say big thanks for open sourcing this project!
+It helps me a lot!
+
+Btw, I want to change the direction of the graph from TB to LR, and I tried simply setting the rankdir property to LR but it didn't work.
+
+This must be noob question, but if you have time, could you tell me how to set layout options such as rankdir or nodesep?
+....
+
+[[issue-261]]
+=== #261 — dagre and RequireJS in Typescript
+
+_none_ | comments: 3 | created: 2019-03-21 | https://github.com/dagrejs/dagre/issues/261
+
+....
+Developing a module (in Typescript) that will be loaded by RequireJS.
+
+```
+/// <amd-dependency path="dagre" name="dagre" />
+```
+This line is needed to build the Require define line:
+```
+define(["require", "exports", "dagre"], function (require, exports, dagre) {
+```
+Then I build the graph:
+```
+	const g: dagre.graphlib.Graph = new dagre.graphlib.Graph({directed: true});
+```
+Here  the type `dagre.graphlib.Graph` is correct, instead the `new dagre.graphlib.Graph({directed: true});` makes typescript complains: `error TS2686: 'dagre' refers to a UMD global, but the current file is a module. Consider adding an import instead.`
+
+Same error when I invoke the layout function by:
+```
+dagre.layout(g);
+```
+In spite of the errors, the js is correct. Any suggestion?
+....
+
+[[issue-260]]
+=== #260 — Network Simplex and Tight Tree Layout difference?
+
+_none_ | comments: 3 | created: 2019-03-06 | https://github.com/dagrejs/dagre/issues/260
+
+....
+While I can see that Network Simplex and Tight tree compute rankings differently, I cannot observe a visual difference between them. Examples of some types of graphs which show considerable difference between them would be great.
+
+
+**Tight Tree**
+<img width="400" alt="screen shot 2019-03-06 at 8 29 05 am" src="https://user-images.githubusercontent.com/13454833/53893038-a387e480-3fea-11e9-8122-5b65738e283d.png">
+
+**Network Simplex**
+<img width="400" alt="screen shot 2019-03-06 at 8 35 24 am" src="https://user-images.githubusercontent.com/13454833/53893122-cf0acf00-3fea-11e9-8ae0-fd9ee725532f.png">
+
+PS:- This is one of many graphs in which I fail to observe a visual difference
+....
+
+[[issue-239]]
+=== #239 — Edge routing issue
+
+_none_ | comments: 3 | created: 2018-03-29 | https://github.com/dagrejs/dagre/issues/239
+
+....
+Edge routing seems to be a bit extreme:
+![image](https://user-images.githubusercontent.com/966863/38086181-4aedf4d8-334b-11e8-9663-4983c1a5a7e1.png)
+....
+
+[[issue-222]]
+=== #222 — after create dag graph,how to update graph
+
+_none_ | comments: 3 | created: 2017-11-02 | https://github.com/dagrejs/dagre/issues/222
+
+....
+after creating dag graph,  I will drag node or edge and add a node, so my question is how to update the graph.
+....
+
+[[issue-217]]
+=== #217 — Force rank to be from left
+
+_none_ | comments: 3 | created: 2017-08-06 | https://github.com/dagrejs/dagre/issues/217
+
+....
+This is more of a question than an actual bug. I'm using dagre with jointjs.
+I looked at the dagre API, and I can't get the elements rank to be on the left as indicated by the picture.
+
+Is it possible to do it in dagre?
+What I have:
+![image](https://user-images.githubusercontent.com/1055516/29003880-9abba11e-7ac7-11e7-9f2d-cd20f962a72d.png)
+
+
+This is what I want:
+![image](https://user-images.githubusercontent.com/1055516/29003860-5255673e-7ac7-11e7-967a-19ea84703820.png)
+....
+
+[[issue-205]]
+=== #205 — error when autolayout
+
+_none_ | comments: 3 | created: 2016-11-24 | https://github.com/dagrejs/dagre/issues/205
+
+....
+The case is :
+ we use graphlib to create a graph  g
+ ```
+      g.setNode("boss1",     { label: "boss1",   width: 30, height: 10 });
+      g.setNode("hford",     { label: "hford",   width: 30, height: 10 });
+      g.setNode("lwilson",     { label: "lwilson",   width: 30, height: 10 });
+      g.setParent("hford",       'boss1', {minLen:1}, '6');
+      g.setParent("lwilson",     'boss1', {minLen:1}, '7');
+ ``` 
+when we create edge which from other node to connect this parent,
+```
+   g.setNode("kspacey",     { label: "kspacey",   width: 30, height: 10 });
+   g.setEdge("kspacey",   "boss1", {minLen:1}, '11');
+```
+then we use 
+```
+  dagre.layout(g);
+```
+
+the error will be:
+```
+dagre.js:2655 Uncaught TypeError: Cannot set property 'rank' of undefined
+    at dfs (http://localhost:63342/test/dagre.js:2655:32)
+    at http://localhost:63342/test/dagre.js:2641:24
+    at arrayMap (http://localhost:63342/test/dagre.js:5454:41)
+    at Function.map (http://localhost:63342/test/dagre.js:10758:28)
+    at dfs (http://localhost:63342/test/dagre.js:2640:32)
+    at http://localhost:63342/test/dagre.js:2641:24
+    at arrayMap (http://localhost:63342/test/dagre.js:5454:41)
+    at Function.map (http://localhost:63342/test/dagre.js:10758:28)
+    at dfs (http://localhost:63342/test/dagre.js:2640:32)
+    at arrayEach (http://localhost:63342/test/dagre.js:5337:29) 
+```
+
+it looks node boss1 is undefined in g.nodes
+....
+
+[[issue-164]]
+=== #164 — Allow to specify vertical displacement for LR layout
+
+_none_ | comments: 3 | created: 2014-11-25 | https://github.com/dagrejs/dagre/issues/164
+
+....
+Would be useful to be able to have an option in Dagre to define a vertical displacement for vertices for a LR layout.
+
+In the graph example below for example the vertices called CMD and CRR are not vertically aligned with MAGELLAN and KYC vertices. Would it be possible to add an option capable of defining the minimum vertical displacement for those cases?
+
+![screen shot 2014-11-25 at 06 32 15](https://cloud.githubusercontent.com/assets/2199262/5181491/4f5731ba-746d-11e4-9771-4b2cbac308b2.png)
+
+Or is there a simple way I could try to make this happen in the current version of Dagre?
+
+Thank you
+....
+
+[[issue-111]]
+=== #111 — How about support manhattan layout algorithm for the edge?
+
+_none_ | comments: 3 | created: 2014-02-21 | https://github.com/dagrejs/dagre/issues/111
+
+....
+Hi,
+
+I found dagre is very useful to do the automatic layout for DAG. But in some cases, orthogonal edges between two nodes are preferred.
+
+Is it possible to support this in dagre?
+....
+
+[[issue-459]]
+=== #459 — Dnyamic node height position y axis
+
+_none_ | comments: 2 | created: 2024-11-07 | https://github.com/dagrejs/dagre/issues/459
+
+....
+![Screenshot 2024-11-07 at 3 33 14 PM](https://github.com/user-attachments/assets/e4f8bd4c-4678-4511-bc67-dc153381ceda)
+
+```
+
+const getLayoutedElements = (nodes, edges, useNodeHeight = false, direction = 'TB') => {
+  const isHorizontal = direction === 'LR'
+
+  const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
+  dagreGraph.setGraph({ rankdir: direction })
+
+  let newNodes = nodes.map((node) => ({ ...node }))
+
+  newNodes.forEach((node) => {
+    return dagreGraph.setNode(node.id, {
+      width: nodeWidth,
+      height: (useNodeHeight ? node.height : nodeHeight) + nodeHeight / 2
+    })
+  })
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target)
+  })
+
+  dagre.layout(dagreGraph)
+
+  newNodes = newNodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id)
+    node.targetPosition = isHorizontal ? 'left' : 'top'
+    node.sourcePosition = isHorizontal ? 'right' : 'bottom'
+
+    console.log(
+      nodeWithPosition,
+      '<<nodeWithPosition.height',
+      nodeWithPosition.y - nodeWithPosition.height / 2
+    )
+    node.position = {
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeWithPosition.height / 2
+    }
+
+    return node
+  })
+
+  return { nodes: newNodes, edges }
+}
+
+
+  const nodesInitialized = useNodesInitialized({})
+  
+ useEffect(() => {
+    if (nodesInitialized) {
+      const { nodes: layoutNodes, edges: layoutEdges } = getLayoutedElements(
+        getNodes(),
+        activeGraph.edges || [],
+        true
+      )
+
+      setNodes(layoutNodes)
+      setEdges(layoutEdges)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesInitialized])
+  
+```
+  I used useNodesInitialized to recalculate the height and position, based on the actual height of the node
+  
+  My problem is each rank/heirarchy doesnt go on the same position y, 
+  
+  Is it possible? the 1, 2 and 3 should have the same position.y
+  same with January and 1.1
+  
+  Thanks in advance
+....
+
+[[issue-458]]
+=== #458 — position error
+
+_none_ | comments: 2 | created: 2024-10-30 | https://github.com/dagrejs/dagre/issues/458
+
+....
+![微信图片_20241030235805](https://github.com/user-attachments/assets/4e5b5485-4b34-4da2-9869-efb05ab49384)
+
+hello everyone
+As shown in the figure
+The position of the node group above is incorrect
+The following is correct
+Has anyone encountered this kind of problem before? It's an occasional issue.
+....
+
+[[issue-453]]
+=== #453 — Bugs in computation of node positions
+
+_none_ | comments: 2 | created: 2024-09-24 | https://github.com/dagrejs/dagre/issues/453
+
+....
+Hello,
+the computation of the positions of nodes has bugs. These bugs become visible when you use nodes with different dimensions.
+The bug in horizontal direction (the nodes should not be overlapping):
+![grafik](https://github.com/user-attachments/assets/798469c7-5434-45b6-88ef-fccac770311a)
+In vertical direction (again, the nodes should not be overlapping):
+![grafik](https://github.com/user-attachments/assets/94ab76cb-74d8-46cd-866b-4dbe0d91fb01)
+
+The issue for the horizontal position lies in the sep() function in dagre/lib/position/bk.js
+Here, the half widths of both nodes are added. But the full width of the first node should be used.
+
+The issue for the vertical position lies in the positionY() function in dagre/lib/position/index.js.
+....
+
+[[issue-452]]
+=== #452 — Question: Can we control positioning of siblings based its relation with parent node when laid out as TB?
+
+_none_ | comments: 2 | created: 2024-09-09 | https://github.com/dagrejs/dagre/issues/452
+
+....
+Imagine a branching logic with True and False branch laid out Top-Bottom structure. What I wish to do is always have `True` branch on the left side and `False` on the right.
+Currently, I have a function that applies dagre layout and returns new position.
+```import dagre from '@dagrejs/dagre';
+import type { LayoutAlgorithm } from '.';
+
+const dagreLayout: LayoutAlgorithm = async (nodes, edges, options) => {
+  const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({
+    rankdir: options.direction,
+    nodesep: options.spacing[0],
+    ranksep: options.spacing[1],
+  });
+
+  nodes.forEach(node => {
+    dagreGraph.setNode(node.id, {
+      width: node.width ?? 0,
+      height: node.height ?? 0,
+    });
+  });
+
+  edges.forEach(edge => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const nextNodes = nodes.map(node => {
+    const { x, y } = dagreGraph.node(node.id);
+
+    const position = {
+      x: x - (node.width ?? 0) / 2,
+      y: y - (node.height ?? 0) / 2,
+    };
+
+    return { ...node, position };
+  });
+
+  return { nodes: nextNodes, edges };
+};
+
+export default dagreLayout;
+
+```
+
+The node can be updated to have data such that they can have `hand: TRUE | FALSE`. But the caveat is, only the immediate children of branch will have the value and subsequent children of those nodes will not.
+How do I make control the position and also, make sure a linear structure?
+
+PS. Apologies, as I wasn't sure where to actually put this question on this repo.
+....
+
+[[issue-324]]
+=== #324 — When each node has its own child nodes, their child nodes will not affect each other. Now they will be displayed equally
+
+_none_ | comments: 2 | created: 2022-04-19 | https://github.com/dagrejs/dagre/issues/324
+
+....
+```
+if (isNode(element)) {
+      const { data,id } = element
+      if(id!=="0"){
+        const {parentId} = data
+        if(parentId===0||parentId){
+          g.setParent(id, parentId+"");
+        }
+      }
+      g.setNode(element.id, {
+        width: element.__rf?.width,
+        height: element.__rf?.height,
+      });
+    } else {
+      g.setEdge(element.source, element.target);
+    }
+```
+I used `setEdge `before
+but i got the graph drawn by the nodes of the second level is evenly spaced, so I think they are caused by no parent-child relationship
+So you see that code
+i added the `setParent`
+I hope they can divide the space equally in their own area
+but i failed
+`Uncaught TypeError: Cannot set properties of undefined (setting 'rank')`
+i don't know what to use
+....
+
+[[issue-320]]
+=== #320 — Is multigraph supported by dagre layout?
+
+_none_ | comments: 2 | created: 2021-09-22 | https://github.com/dagrejs/dagre/issues/320
+
+....
+I want to have several edges going from the same node source and target. But using dagre it seems these edges are just completely being ignored and dagreGraph.edges() returns only one edge per source-target. Am I missing something?
+....
+
+[[issue-312]]
+=== #312 — is it possible to provide esm build in dist
+
+_none_ | comments: 2 | created: 2021-02-25 | https://github.com/dagrejs/dagre/issues/312
+
+....
+I've been able to build an esm/es6 version of `dagre` [here](https://github.com/codeStryke/dagre-esm). I'm happy to contribute that back in a PR if it is of interest. I haven't published any packages to npm since it would be better if that logic lived in this repo.
+....
+
+[[issue-305]]
+=== #305 — Implement Coffeman-Graham sorter
+
+_none_ | comments: 2 | created: 2020-07-30 | https://github.com/dagrejs/dagre/issues/305
+
+....
+In Argo Workflows, we have stopped using Dagre for laying out our DAGs, and instead implemented the Coffeman-Graham Sorter (CGS). Why? Because Dagre would take too long to render large (2000+ node) graphs:
+
+https://github.com/argoproj/argo/issues/2367
+
+The flip-side of this is that for complex graph, CGS doesn't produce an easy to understand layout:
+
+https://github.com/argoproj/argo/issues/3595
+
+Would the Dagre team be interested in accepting a pull request to leverage CGS as another layout algorithm?
+
+https://github.com/argoproj/argo/tree/master/ui/src/app/workflows/components/workflow-dag
+....
+
+[[issue-289]]
+=== #289 — Is there a way to supply a custom ranker or fix the layout in the rank axis?
+
+_none_ | comments: 2 | created: 2020-03-16 | https://github.com/dagrejs/dagre/issues/289
+
+....
+My use case is to layout a graph in time. Every node in my graph is associated with a timestamp (and duration), which is always consistent with the edge direction (edges always point in positive time direction).
+
+Hence, I'd like to use that timestamp for ranking, or, alternatively, use the timestamp as the x coordinate (and duration as the width). Dagre would then figure out the best y-coordinate to minimize edge crossings.
+....
+
+[[issue-256]]
+=== #256 — Some strange layout decisions
+
+_none_ | comments: 2 | created: 2018-12-25 | https://github.com/dagrejs/dagre/issues/256
+
+....
+Please feel free to close this issue since it's nothing more than un-constructive complaining. (Similar to #131)
+
+I'm seeing some strange edge points when I go to layout my graph: 
+
+<img width="1356" alt="screen shot 2018-12-25 at 12 11 57 pm" src="https://user-images.githubusercontent.com/2761597/50426263-bdfd4f00-083e-11e9-89ae-f6e372087d77.png">
+
+Here's what that same subnetwork looks like when I don't use dagre's control points (`d3.linkVertical()` instead)
+
+<img width="398" alt="screen shot 2018-12-25 at 12 16 52 pm" src="https://user-images.githubusercontent.com/2761597/50426286-1896ab00-083f-11e9-90cf-f14f5a2731bc.png">
+
+You can kind of see why dagre is choosing to do what it's doing, but graphviz's `dot` doesn't struggle with this, so I'm going to move to creating png's on the backend and sending those, instead of doing the layout on the frontend, I think (unless graphviz can export control points for arrows too).
+....
+
+[[issue-255]]
+=== #255 — Cannot set property 'order' of undefined 
+
+_none_ | comments: 2 | created: 2018-12-04 | https://github.com/dagrejs/dagre/issues/255
+
+....
+### Problem description
+Hi there, I have come across the same issue as described in [https://github.com/dagrejs/dagre/issues/234#issuecomment-399488074](url).
+Fortunately, I was able to sketch out a simple html page to reproduce the bug.
+The data part below is quite big since I can not reproduce the bug with only a small amount of data.
+Precisely speaking, I dont know which part of the data triggers the error.
+
+### Context
+I am using cytoscape, so this snippet contains code of cytoscape, cytoscape.dagre  as well as dagre.
+Three kinds of entities are drawn on the canvas, which are normal nodes, compound nodes(which are the parents of the normal node, in cytoscape's jargon) and also edges.
+The interesting thing is that if I opt out of using dagre and choose to use "breadfirst", "grid" provided by cytoscape, everything renders fine.
+Also, If I remove "edges" from the elements to be drawn, no error occurs.
+
+Please check my code snippet below since it is runnable if you throw it into any browser.
+
+### code
+```
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.7.4/dist/dagre.js"></script>
+    <script src="https://cytoscape.org/cytoscape.js-dagre/cytoscape-dagre.js"></script>
+    <style>
+        #cyto-container {
+            width: 1000px;
+            height: 1000px;
+            border: 1px solid red;
+        }
+    </style>
+</head>
+<body>
+<div id="cyto-container">
+
+</div>
+<script>
+    // normal nodes
+    const nodes = [
+        {
+            "data": {
+                "id": "User10411150860",
+                "label": "M",
+                "weight": 1,
+                "parent": "bucket15",
+                "bgColor": "#002d56"
+            },
+            "classes": "normal"
+        },
+        {
+            "data": {
+                "id": "User11384089212",
+                "label": "F",
+                "weight": 1,
+                "parent": "bucket20",
+                "bgColor": "#bedfef"
+            },
+            "classes": "normal"
+        },
+        {
+            "data": {
+                "id": "User1154546535",
+                "label": "M",
+                "weight": 1,
+                "parent": "bucket14",
+                "bgColor"
+
+_…(truncated; see URL)_
+....
+
+[[issue-221]]
+=== #221 — layers(node.rank) is undefined
+
+_none_ | comments: 2 | created: 2017-10-27 | https://github.com/dagrejs/dagre/issues/221
+
+....
+am getting this error inside dagre-core when using cytoscape-dagre layout plugin.
+
+seems to be something to do with node.rank set to NAN
+inside the dfs function (inside longestPath) at line 2634
+
+example,
+
+<!DOCTYPE>
+
+<html>
+
+  <head>
+    <title>cytoscape-dagre.js demo</title>
+
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+
+    <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.js"></script>
+    <script src="./graphlib.core.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.7.4/dagre.core.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.4/cytoscape.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.1.0/cytoscape-dagre.min.js"></script>
+
+    <style>
+      body {
+        font-family: helvetica;
+        font-size: 14px;
+      }
+      #cy {
+        width: 500px;
+        height: 500px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 999;
+      }
+      h1 {
+        opacity: 0.5;
+        font-size: 1em;
+      }
+    </style>
+
+  </head>
+
+  <body>
+    <h1>cytoscape-dagre demo</h1>
+
+    <div id="cy"></div>
+
+    <script>
+      $(function(){
+        var cy = window.cy = cytoscape({
+          container: document.getElementById('cy'),
+          boxSelectionEnabled: false,
+          autounselectify: true,
+          layout: {
+            name: 'dagre',
+            rankDir: 'BT'
+          },
+          elements: {
+            nodes: [
+              { data: { id: 'a1' } }
+            ]
+          }
+        });
+      });
+    </script>
+
+  </body>
+
+</html>
+....
+
+[[issue-187]]
+=== #187 — crossing edges
+
+_none_ | comments: 2 | created: 2015-08-03 | https://github.com/dagrejs/dagre/issues/187
+
+....
+Thank you for this library it is very nice
+but I have a bit of a problem with edge crossings.
+
+I generated the following graph and I have to generate crossing without graph.
+
+![capture](https://cloud.githubusercontent.com/assets/12701348/9031946/e31b07c0-39b9-11e5-9162-9ba6ea7deb7e.PNG)
+
+g.setNode(504);
+g.setNode(403);
+g.setNode(401);
+g.setNode(101);
+g.setNode(1); 
+g.setNode(407);
+g.setNode(405);
+g.setNode(501);
+g.setNode(410);
+g.setNode(502);
+
+g.setEdge(403,504);
+g.setEdge(401,403);
+g.setEdge(101,401);
+g.setEdge(1,101);
+g.setEdge(407,403);
+g.setEdge(405,504);
+g.setEdge(1,405);
+g.setEdge(501,405);
+g.setEdge(403,410);
+g.setEdge(405,502);
+
+dagre.layout(g);
+
+The data comes in this order. What should I do? Is this a bug or something else?
+
+Thank you for your help.
+....
+
+[[issue-163]]
+=== #163 — Not one of the example show up in IE
+
+_none_ | comments: 2 | created: 2014-11-19 | https://github.com/dagrejs/dagre/issues/163
+
+....
+Not sure if this is a feature, but none of the demos worked in any recent version of IE (9-10-11).
+
+I tested http://cpettitt.github.io/project/dagre-d3/latest/demo/hover.html with crossbrowsertesting.com 
+
+IE 11 stack:
+SCRIPT5022: NoModificationAllowedError
+File: dagre-d3.js, Line: 307, Column 5
+
+IE 10 stack:
+SCRIPT5022: NoModificationAllowedError
+dagre-d3.js, Line: 307, character 5
+
+IE 9 stack:
+SCRIPT5022: DOM Exception: NO_MODIFICATION_ALLOWED_ERR (7)
+d3.v3.min.js, line 3 character 12208
+....
+
+[[issue-160]]
+=== #160 — Bounded graph size
+
+_none_ | comments: 2 | created: 2014-11-17 | https://github.com/dagrejs/dagre/issues/160
+
+....
+Hi there, I was just wondering if it's possible to cap the size of the graph in one direction at all?
+
+I've got a scenario where I've got a bunch of nodes that have no edges and they just get positioned in this really long horizontal line. I would prefer to use up some vertical space too, so I was hoping it was possible to cap the width and have new nodes wrap to the left below other nodes/sub graphs?
+
+Thanks
+....
+
+[[issue-128]]
+=== #128 — Nodes not given `dagre` property after layout
+
+_none_ | comments: 2 | created: 2014-05-26 | https://github.com/dagrejs/dagre/issues/128
+
+....
+The README states that:
+
+> An object with layout information will be attached to each node and edge under the `dagre` property.
+
+However, running the example given in the readme, if I call `g.node('kspacey')` after the layout runs, I see no additional information attached to the node. If I call `layout.node('kspacey')`, I can't see the `label` property. Am I misunderstanding the documentation here?
+
+Obviously I can synthesize the information I need from the `layout` and `g` objects depending on what data I want, but I just want to know whether I'm missing something!
+....
+
+[[issue-42]]
+=== #42 — Create a Raphäel example
+
+`enhancement` | comments: 2 | created: 2012-11-08 | https://github.com/dagrejs/dagre/issues/42
+
+....
+It could be a good way to show how use Dagre with other rendering engine.
+....
+
+[[issue-479]]
+=== #479 — dagre placing wrong position when node has parentId
+
+_none_ | comments: 1 | created: 2025-06-02 | https://github.com/dagrejs/dagre/issues/479
+
+....
+I'm using xyflow/react and some nodes has **parentId** property.
+
+dagre keeps wrong placing nodes when has parentId.
+
+How can i solve this problem
+
+Here is no parentId on left and right node
+![Image](https://github.com/user-attachments/assets/9ce36fb6-3080-45e6-be9a-f00cf3ab29c1)
+
+And here is with parentId on left and right node
+
+![Image](https://github.com/user-attachments/assets/55abd5d4-54be-4733-bf8e-9fe6c2f1606c)
+
+HEre is my code
+```
+
+ const getLayoutedElements = (nodes, edges) => {
+
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setGraph({ rankdir: direction });
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+    nodes.forEach((node) => {
+      dagreGraph.setNode(node.id, { width: node.width || defaultNodeWidth, height: node.height || defaultNodeHeight });
+
+    });
+
+    edges.forEach((edge) => {
+      dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    let layoutedNodes = nodes.map((node) => {
+      const nodeWithPosition = dagreGraph.node(node.id);
+
+      return {
+        ...node, // diğer node bilgileri korunur
+        targetPosition: direction === workflowDirectionTypes.LR ? 'left' : 'top',
+        sourcePosition: direction === workflowDirectionTypes.TB ? 'right' : 'bottom',
+        position: {
+          x: nodeWithPosition.x - (node.width || defaultNodeWidth) / 2,
+          y: nodeWithPosition.y - (node.height || defaultNodeHeight) / 2
+        },
+        width: node.width || defaultNodeWidth,
+        height: node.height || defaultNodeHeight
+      };
+    });
+
+
+    return { nodes: layoutedNodes, edges };
+  };
+
+```
+how can i solve this problem. I need parentId when deleting hirearchial with xyflow/react? Expected behaviour is as first image even has parentId
+....
+
+[[issue-472]]
+=== #472 — Aligning nodes X position
+
+_none_ | comments: 1 | created: 2025-03-10 | https://github.com/dagrejs/dagre/issues/472
+
+....
+Is there a way to ensure the nodes X axis doesn't get pushed out like the following:
+
+<img width="1607" alt="Image" src="https://github.com/user-attachments/assets/a1c89cf0-05bd-4d4e-a99f-c350e2429119" />
+
+
+I don't really understand why these nodes get an X position further out
+
+```
+import dagre from '@dagrejs/dagre';
+import { Edge, Node, Position } from '@xyflow/react';
+import { Task } from './nodes/types';
+
+const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+
+/**
+ * TB - top to bottom,
+ * BT - bottom to top,
+ * LR - left to right,
+ * RL - right to left
+ */
+type Direction = 'TB' | 'BT' | 'LR' | 'RL';
+
+export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: Direction = 'TB') => {
+  const isHorizontal = direction === 'LR';
+  dagreGraph.setGraph({
+    rankdir: direction,
+    ranksep: 24,
+  });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: node.measured?.width, height: node.measured?.height });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const newNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    const isTaskNode = node.type === 'task' && 'task' in node.data;
+    const task = node.data.task as Task;
+    const isApproveTask = isTaskNode && task.type === 'approve';
+    const nodeXMargin = isApproveTask ? 20 : 0;
+
+    const newNode: Node = {
+      ...node,
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+      // We are shifting the dagre node position (anchor=center center) to the top left
+      // so it matches the React Flow node anchor point (top left).
+      position: {
+        x: nodeWithPosition.x - (node.measured?.width || 0) / 2 + nodeXMargin,
+        y: nodeWithPosition.y - (node.measured?.height || 0) / 2,
+      },
+    };
+
+    return newNode;
+  });
+
+  return { nodes: newNodes, edges };
+};
+```
+
+I would like to be able to ensure all the tasks with green icons are aligned like the following, but the only way I can do that is by manually defining the X position for those nodes which wouldn't work with a dynamic layout
+
+<img width="466" alt="Image" src="https://github.com/user-attachments/assets/0d60ca0f-440a-43dd-9f4f-71c891fbcb41" />
+....
+
+[[issue-468]]
+=== #468 — Edge weights have no visible effect on layout
+
+_none_ | comments: 1 | created: 2025-01-09 | https://github.com/dagrejs/dagre/issues/468
+
+....
+Hey, maybe this is a silly question, but I’m trying to add weights to my edges in DagreJS according to the [wiki documentation](https://github.com/dagrejs/dagre/wiki#configuring-the-layout), which states:
+
+> “The weight to assign edges. Higher weight edges are generally made shorter and straighter than lower weight edges.”
+
+However, I don’t see any effect on the layout. I have multiple parallel threads with different weights, but changing these values doesn’t affect their relative order or geometry in any noticeable way.
+
+**Example**  
+I have a small demo here on [JSFiddle](https://jsfiddle.net/s6wjrg0u/1/). The graph has five parallel “threads” going from a single “start” node to an “end” node, each with different `weight` values for the edges. 
+
+![Screenshot 2025-01-09 at 10 48 11](https://github.com/user-attachments/assets/08dd8c1a-b9c2-411f-b798-ec9b40025b4e)
+
+This is code for defining edges:
+```js
+// Thread 1
+g.setEdge("Start", "A1", { weight: 2 })
+g.setEdge("A1", "B1", { weight: 2 })
+g.setEdge("B1", "End", { weight: 2 })
+
+// Thread 2
+g.setEdge("Start", "A2", { weight: 5 })
+g.setEdge("A2", "B2", { weight: 5 })
+g.setEdge("B2", "End", { weight: 5 })
+
+// Thread 3
+g.setEdge("Start", "A3", { weight: 10 })
+g.setEdge("A3", "B3", { weight: 10 })
+g.setEdge("B3", "End", { weight: 10 })
+
+// Thread 4
+g.setEdge("Start", "A4", { weight: 100 })
+g.setEdge("A4", "B4", { weight: 100 })
+g.setEdge("B4", "End", { weight: 100 })
+
+// Thread 4
+g.setEdge("Start", "A5", { weight: 1000 })
+g.setEdge("A5", "B5", { weight: 1000 })
+g.setEdge("B5", "End", { weight: 1000 })
+```
+
+My expectation is that the “heaviest” route (A5) might be placed in the center or otherwise distinguished from lighter routes, but this isn’t happening.
+
+
+**Question**  
+- Are edge weights currently expected to influence layout ordering or path shape in DagreJS?  
+- Is there something else I need to configure (e.g., rankdir, ranker, acyclicity, or special layout options) for weights to have an effect?  
+- Is this feature deprecated or only partially supported in the current version of Dagre?
+
+**Additional Context**  
+- **Dagre version**: (1.1.4)
+
+Any guidance would be greatly appreciated!
+....
+
+[[issue-463]]
+=== #463 — Is it possible to align nodes to the left side?
+
+_none_ | comments: 1 | created: 2024-11-28 | https://github.com/dagrejs/dagre/issues/463
+
+....
+Is it possible to change the alignment of the tree to the left side? My issue is, that when I have multiple trees with different lengths, they all _start_ at the right side.
+
+Like in this case, I would like to move the yellow marked block to the left side.
+![tree_right](https://github.com/user-attachments/assets/1d2477ee-cb2e-4e7b-80ad-b274b9d1d36d)
+
+These are my complete options:
+```JS
+        graph.setGraph({
+            rankdir: 'RL',
+            nodesep: 10,
+            ranksep: 50,
+            edgesep: 10,
+            marginx: 0,
+            marginy: 0,
+        });
+```
+....
+
+[[issue-461]]
+=== #461 — dagre.layout() options not taken into account
+
+_none_ | comments: 1 | created: 2024-11-15 | https://github.com/dagrejs/dagre/issues/461
+
+....
+Hi,
+
+I'm integrating dagre into https://github.com/azimuttapp/azimutt (an ERD tool) and it looks like when I change options in the `dagre.layout` function, I still get the same result :sweat_smile: 
+I followed the https://github.com/dagrejs/dagre/wiki#an-example-layout, here is my code:
+```ts
+const g = new dagre.graphlib.Graph()
+g.setGraph({})
+g.setDefaultEdgeLabel(() => ({}))
+nodes.forEach(n => g.setNode(n.id, {width: n.size.width, height: n.size.height}))
+edges.forEach(e => g.setEdge(e.src, e.ref))
+dagre.layout(g, {rankdir: 'LR', nodesep: 20, edgesep: 0, ranksep: 20}) // these options don't change anything, tried LR, TB, BT... rankdir and more :/
+app.gotAutoLayout(g.nodes().map(id => {
+    const node = g.node(id)
+    return {id, size: {width: node.width, height: node.height}, pos: {left: node.x, top: node.y}}
+}))
+```
+Any idea why?
+
+Also, is there a way to "freeze" existing nodes? When I'm adding a new entity (in my ERD), I want to get a good position for it but not change anything else. Is it possible with dagre?
+
+Thanks!
+....
+
+[[issue-455]]
+=== #455 — Can I set nodeSep only for all siblings but not for all nodes in the same rank?
+
+_none_ | comments: 1 | created: 2024-10-23 | https://github.com/dagrejs/dagre/issues/455
+
+....
+Here is my current configuration of the dagre layout:
+
+```javascript
+dagreGraph.graph().rankdir = 'TB'; 
+dagreGraph.graph().nodesep = 25;`
+dagreGraph.graph().edgesep = 50;
+dagreGraph.graph().ranksep = 60;
+dagreGraph.graph().ranker = 'network-simplex';
+dagre.layout(dagreGraph);
+``` 
+
+However, the tree looks like this:
+![bug](https://github.com/user-attachments/assets/ea9ee775-5675-4e40-9c59-4c1cdb155532)
+
+I would like the siblings ma
+intain the same nodeSep but not all nodes in the same rank, meaning I would like a = 25, b = 25, and c != 25.
+
+Does anyone know how I can reach that layout? Thanks in advance for any suggestions.
+....
+
+[[issue-450]]
+=== #450 — Importing dagre.js after traspiling with Babel
+
+_none_ | comments: 1 | created: 2024-08-30 | https://github.com/dagrejs/dagre/issues/450
+
+....
+Hi, I want to preface this by saying that we are not knowledgeable with javascript importing, but would be grateful if you can help us with our problem :)
+
+We want to use dagre in application that uses Qml for UI. Qml runtime allows to import javascript files to use in Qml, but only supports Ecmascript version 7. Our solution was to use Babel to transpile the `dagre.js` to ES7, then Qml engine seems to parse the `dagre.js` correctly without complaints. However, after importing `dagre.js`, we can't access the exported variables, like `dagre.graphlib`.
+
+Are there any reasons that this should not work, if Qml engine implements ES7. Maybe `dagre.js` is only supposed to work in browsers? Or some other checks during import fail... Would be super helpful to hear some input on this.
+
+I'm also attaching the transpiled `dagre.js`.
+[dagre.es7.zip](https://github.com/user-attachments/files/16818750/dagre.es7.zip)
+....
+
+[[issue-438]]
+=== #438 — Align UP and LEFT not working as expected
+
+_none_ | comments: 1 | created: 2024-03-18 | https://github.com/dagrejs/dagre/issues/438
+
+....
+When using the 'LR' `rankdir` attribute, this is the graph that is generated. 
+![image](https://github.com/dagrejs/dagre/assets/98823105/b46e04b6-b4e8-413b-8005-6b2a7d3fe4aa)
+
+I was wondering if there is a way to generate a graph like this?
+![image](https://github.com/dagrejs/dagre/assets/98823105/c8f49f78-8764-4332-83c2-fed750166c3f)
+
+I assumed if I was to use the 'UL' align attribute for the graph that this would create the desired effect, but when I use it I end up with this:
+![image](https://github.com/dagrejs/dagre/assets/98823105/f46c3424-54dc-4be0-a721-e9d28b35db64)
+
+If anyone would have some ideas they would be really appreciated!
+....
+
+[[issue-436]]
+=== #436 — Node version 14 
+
+_none_ | comments: 1 | created: 2024-02-28 | https://github.com/dagrejs/dagre/issues/436
+
+....
+tell me how we use it on node version 14
+....
+
+[[issue-353]]
+=== #353 — Improve documentation
+
+_none_ | comments: 1 | created: 2023-07-06 | https://github.com/dagrejs/dagre/issues/353
+
+....
+I just started using Dagre, and while I really like it so far, I don't have a great understanding of many parts of the api. For example, the `setGraph` and `setDefaultEdgeLabel` functions seem to be for setting options on the graph and edges, but it would be great to have some api docs around these core functions.
+....
+
+[[issue-322]]
+=== #322 — Using existing coordinates as an initial condition
+
+_none_ | comments: 1 | created: 2022-02-10 | https://github.com/dagrejs/dagre/issues/322
+
+....
+I have a graph which already has coordinates on the nodes. Is there a way to leverage those to use as a starting point for the algorithm, to reduce the computation ?
+
+I was also wondering if it was possible to fix the coordinates of some nodes so they have a fixed position ?
+
+If these features are not available, I don't mind changing the code source but some pointers would really help me
+
+Thanks
+....
+
+[[issue-315]]
+=== #315 — Performance issue with dagre layout
+
+_none_ | comments: 1 | created: 2021-04-26 | https://github.com/dagrejs/dagre/issues/315
+
+....
+Hello,
+I'm trying to visualize big graphs with thousands of nodes.
+
+I noticed that when using breadthfirst layout the graph is generated about 40x faster than with dagre layout. I was testing on graph with 1k nodes and 2k edges (5 sec vs. 3 min depending on the layout). Is that expected performance?
+
+I am using Angular 11 and I test the simplest graph with no styling etc. like in the code snippet below.
+```
+    let cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: {
+        nodes: this.nodes,
+        edges: this.edges
+      },
+      layout: {
+        name: 'breadthfirst',
+        // name: 'dagre',
+      }
+    });
+```
+....
+
+[[issue-313]]
+=== #313 — Align nodes to the left - UL not working as intended
+
+_none_ | comments: 1 | created: 2021-03-02 | https://github.com/dagrejs/dagre/issues/313
+
+....
+Hi 
+
+I can't get the nodes to align to the left, only for the first node.
+
+![billede](https://user-images.githubusercontent.com/5102143/109638581-3c608480-7b5f-11eb-95f8-cdd5e7b58684.png)
+
+Here are my settings:
+ align: 'UL',
+      acyclicer: 'greedy',
+      nodesep: 50,
+      ranksep: 50,
+      edgesep: 50,
+      marginx: 50,
+      marginy: 50
+
+I checked the code node_modules/dagre/lib/position/bk.js, but I fail to see how it is possible to align all nodes to the left.
+
+If I disable alignment then the last node will align to the left, but the first node keeps some distance to the left.
+
+![billede](https://user-images.githubusercontent.com/5102143/109638852-8d707880-7b5f-11eb-81a6-da070c34cc90.png)
+....
+
+[[issue-303]]
+=== #303 — Cluster padding options
+
+_none_ | comments: 1 | created: 2020-06-18 | https://github.com/dagrejs/dagre/issues/303
+
+....
+I want to set custom padding for group of nodes. How i can do it now?
+....
+
+[[issue-294]]
+=== #294 — API clarification
+
+_none_ | comments: 1 | created: 2020-04-03 | https://github.com/dagrejs/dagre/issues/294
+
+....
+1. On the wiki page it is described that nodes can have width and height only. However, in other places I see that parent property is also used? Where I could find documentation about it?
+
+2. Wiki page states that edge can have some label parameters, but there is no mention of label in the output. Is there something missing?
+....
+
+[[issue-286]]
+=== #286 — Right-angled edges
+
+_none_ | comments: 1 | created: 2020-01-28 | https://github.com/dagrejs/dagre/issues/286
+
+....
+Is it possible to have the edges be straight, ninety degree right angles? I can't find anything in the documentation or examples.
+....
+
+[[issue-284]]
+=== #284 — calculating positioning error
+
+_none_ | comments: 1 | created: 2019-12-10 | https://github.com/dagrejs/dagre/issues/284
+
+....
+here is my data: 
+const data = {
+  "nodes": [
+    {
+      "label": "Data Source(ID = 1)",
+      "parallelism": "1",
+      "nodeDesc": "Source: Custom Source",
+      "id": "1"
+    },
+    {
+      "label": "Operator(ID = 2)",
+      "parallelism": "1",
+      "nodeDesc": "Filter",
+      "id": "2"
+    },
+    {
+      "label": "Operator(ID = 3)",
+      "parallelism": "1",
+      "nodeDesc": "from: (id, age, name, . . . ...)",
+      "id": "3"
+    },
+    {
+      "label": "Operator(ID = 4)",
+      "parallelism": "1",
+      "nodeDesc": "where: (>(age, 50)), select: (name, id, age)",
+      "id": "4"
+    },
+    {
+      "label": "Operator(ID = 5)",
+      "parallelism": "1",
+      "nodeDesc": "to: Tuple2",
+      "id": "5"
+    },
+    {
+      "label": "Operator(ID = 6)",
+      "parallelism": "1",
+      "nodeDesc": "Flat Map",
+      "id": "6"
+    },
+    {
+      "label": "Operator(ID = 7)",
+      "parallelism": "1",
+      "nodeDesc": "Filter",
+      "id": "7"
+    },
+    {
+      "label": "Operator(ID = 8)",
+      "parallelism": "1",
+      "nodeDesc": "from: (name, id, age, . . . ...)",
+      "id": "8"
+    },
+    {
+      "label": "Operator(ID = 10)",
+      "parallelism": "1",
+      "nodeDesc": "groupBy: (id), window: (SlidingGroupWindow('w, 'proctime, 5000.millis, 3000.millis)), select: (id, COUNT(name) AS TMP_0, SUM(age) AS TMP_1)",
+      "id": "10"
+    },
+    {
+      "label": "Operator(ID = 11)",
+      "parallelism": "1",
+      "nodeDesc": "select: (id, TMP_0 AS name_count, TMP_1 AS age_sum)",
+      "id": "11"
+    },
+    {
+      "label": "Operator(ID = 12)",
+      "parallelism": "1",
+      "nodeDesc": "to: Tuple2",
+      "id": "12"
+    },
+    {
+      "label": "Operator(ID = 13)",
+      "parallelism": "1",
+      "nodeDesc": "Flat Map",
+      "id": "13"
+    },
+    {
+      "label": "Operator(ID = 14)",
+      "parallelism": "1",
+      "nodeDesc": "Filter",
+      "id": "14"
+    },
+    {
+      "label": "Operator(ID = 15)",
+      "parallelism": "1",
+      "nodeDesc": "from: (id, age, name, . . . ...)",
+      "id": "15"
+    },
+    {
+      "label": "Operator(ID = 16)",
+      "parallelism": "1",
+      "nodeDesc": "where: (<(age, 50)), select: (name, id, age)",
+      "id": "16"
+    },
+    {
+      "label": "Operator(ID = 17)",
+      "parallelism": "1",
+      "nodeDesc": "to: Tuple2",
+      "id": "17"
+    },
+    {
+      "label": "Operator(ID = 18)",
+      "parallelism": "1",
+      "nodeDesc": "Flat Map",
+      "id": "18"
+    },
+    {
+      "label": "Operator(ID = 19)",
+      "parallelism": "1",
+   
+
+_…(truncated; see URL)_
+....
+
+[[issue-280]]
+=== #280 — cannot set edge minlen=0
+
+_none_ | comments: 1 | created: 2019-09-10 | https://github.com/dagrejs/dagre/issues/280
+
+....
+g.setEdge(source, target, { minlen: 0 });
+
+this will result in a crash with custom shapes while computing polygon-point intersection within dagreD3.intersect.polygon(node, points, point);
+....
+
+[[issue-276]]
+=== #276 — Can the spacing between nodes and lines be increased a little?
+
+_none_ | comments: 1 | created: 2019-08-12 | https://github.com/dagrejs/dagre/issues/276
+
+....
+![UF{B@DIW VHFLL5SJ0X3 AD](https://user-images.githubusercontent.com/39945052/62856692-36f6db80-bd28-11e9-840a-551972979121.png)
+
+Can the spacing between nodes and lines be increased a little?
+....
+
+[[issue-275]]
+=== #275 — When I have a lot of data to dagre.layout, it takes a long time.Is there an optimization scheme？
+
+_none_ | comments: 1 | created: 2019-07-22 | https://github.com/dagrejs/dagre/issues/275
+
+....
+traceData.nodeList.length = 351
+traceData.lineList.length = 2742
+
+```
+    console.log('start ->',new Date())
+    let g = new dagre.graphlib.Graph();
+    g.setGraph({ rankdir: 'LR' });
+    g.setDefaultEdgeLabel(() => { return {}; });
+
+    console.log('start, set data ->', new Date())
+
+    traceData.nodeList.forEach(node => {
+      g.setNode(node.nodeCode,  { label: node.nodeCode, width: 150, height: 30 });
+    })
+    console.log('setNode ->',new Date())
+
+    traceData.lineList.forEach(edge => {
+      g.setEdge(edge.fromNode, edge.toNode)
+    })
+    console.log('setEdge ->',new Date())
+
+    dagre.layout(g)
+    console.log('end, set data ->', new Date())
+```
+log result:
+```
+start -> Mon Jul 22 2019 23:40:38 GMT+0800 
+start, set data -> Mon Jul 22 2019 23:40:38 GMT+0800
+setNode -> Mon Jul 22 2019 23:40:38 GMT+0800 
+setEdge -> Mon Jul 22 2019 23:40:38 GMT+0800
+end, set data -> Mon Jul 22 2019 23:43:21 GMT+0800
+```
+Finish running：dagre.layout(g), It took three minutes. Is there an optimization scheme. THX！
+....
+
+[[issue-269]]
+=== #269 — Document additional style options
+
+_none_ | comments: 1 | created: 2019-06-14 | https://github.com/dagrejs/dagre/issues/269
+
+....
+For example, documenting how to set padding for each node.
+
+I stumbled on this in the source after looking for a way to remove padding:
+```
+var NODE_DEFAULT_ATTRS = {
+  paddingLeft: 10,
+  paddingRight: 10,
+  paddingTop: 10,
+  paddingBottom: 10,
+  rx: 0,
+  ry: 0,
+  shape: "rect"
+};
+```
+
+Having this documented would have saved me a few hours of research - it's definitely worth documenting! :)
+
+I'm not sure whether this should be associated with dagre-d3 or dagre itself.
+....
+
+[[issue-268]]
+=== #268 — modify edge line
+
+_none_ | comments: 1 | created: 2019-06-14 | https://github.com/dagrejs/dagre/issues/268
+
+....
+![image](https://user-images.githubusercontent.com/32211517/59488661-1c84bb00-8ebb-11e9-952d-0bf83125f1f1.png)
+
+i used edge style '**this.curve = shape.curveBasi;**'
+edge start point move to node bottom position,
+current curved line is gray color.
+but i want to change red line like pic. otherwise so i don't add point into edge point.
+
+how can i edge add point to draw curved is natural.?
+....
+
+[[issue-267]]
+=== #267 — networkSimplexRanker crashes: Cannot read property 'v' of undefined
+
+_none_ | comments: 1 | created: 2019-06-12 | https://github.com/dagrejs/dagre/issues/267
+
+....
+I'm having problems layouting a graph with default settings, it crashes while computing the ranks:
+
+```
+TypeError: Cannot read property 'v' of undefined
+    at exchangeEdges (network-simplex.js:197)
+    at networkSimplex (network-simplex.js:64)
+    at networkSimplexRanker (index.js:47)
+    at rank (index.js:34)
+    at eval (layout.js:35)
+    at notime (util.js:235)
+    at runLayout (layout.js:35)
+    at eval (layout.js:25)
+    at notime (util.js:235)
+    at eval (layout.js:25)
+```
+
+Switching to `ranker: 'tight-tree'` resolves this.
+
+I'm not sure what the best way to share the crashing example is – here's a JSON representation of the smallest `dagre.graphlib.Graph()` I found that reproduces this:
+
+```
+{"_isDirected":true,"_isMultigraph":false,"_isCompound":false,"_label":{"nodesep":100},"_nodes":{"place-14x9-PCAssignExpression":{"type":"place","place":{"key":"14x9-PCAssignExpression","displayName":"14x9-PCAssignExpression","extensions":{"sourcemap":{"line":14,"column":9}}},"dagreKey":"place-14x9-PCAssignExpression","width":160,"height":80},"place-13x9-PCStmtExpression":{"type":"place","place":{"key":"13x9-PCStmtExpression","displayName":"13x9-PCStmtExpression","extensions":{"sourcemap":{"line":13,"column":9}}},"dagreKey":"place-13x9-PCStmtExpression","width":160,"height":80},"place-13x9-PCPostfixExpression":{"type":"place","place":{"key":"13x9-PCPostfixExpression","displayName":"13x9-PCPostfixExpression","extensions":{"sourcemap":{"line":13,"column":9}}},"dagreKey":"place-13x9-PCPostfixExpression","width":160,"height":80},"place-13x9-PCPostfixExpression-7":{"type":"place","place":{"key":"13x9-PCPostfixExpression-7","displayName":"13x9-PCPostfixExpression","extensions":{"sourcemap":{"line":13,"column":9}}},"dagreKey":"place-13x9-PCPostfixExpression-7","width":160,"height":80},"place-12x9-PCPrimitiveStmt":{"type":"place","place":{"key":"12x9-PCPrimitiveStmt","displayName":"12x9-PCPrimitiveStmt","extensions":{"sourcemap":{"line":12,"column":9}}},"dagreKey":"place-12x9-PCPrimitiveStmt","width":160,"height":80},"place-11x9-PCStmtExpression":{"type":"place","place":{"key":"11x9-PCStmtExpression","displayName":"11x9-PCStmtExpression","extensions":{"sourcemap":{"line":11,"column":9}}},"dagreKey":"place-11x9-PCStmtExpression","width":160,"height":80},"place-11x9-PCPostfixExpression":{"type":"place","place":{"key":"11x9-PCPostfixExpression","displayName":"11x9-PCPostfixExpression","extensions":{"sourcemap":{"line":11,"column":9}}},"dagreKey":"place-11x9-PCPostfixExpr
+
+_…(truncated; see URL)_
+....
+
+[[issue-259]]
+=== #259 — Nodes are 2x bigger with labelType: 'html'
+
+_none_ | comments: 1 | created: 2019-03-03 | https://github.com/dagrejs/dagre/issues/259
+
+....
+When I set `labelType: 'html'` for my nodes, Dagre seems to reserve 2 times as much space for the label rectangle.
+
+I'm using a 4K monitor in case that could affect this.
+
+Without `labelType: 'html'`:
+![lol2](https://user-images.githubusercontent.com/7543552/53696502-284ae680-3dd0-11e9-9dca-1e31ae9b5f03.png)
+
+
+With `labelType: 'html'`:
+![lol3](https://user-images.githubusercontent.com/7543552/53696503-284ae680-3dd0-11e9-85ee-a5ebc7c4b301.png)
+
+Here you can see that the width and height of the `foreignObject` is exactly 2x the width and height of the actual html content:
+
+<details>
+<summary>Inspector screenshots</summary>
+
+![screenshot 25](https://user-images.githubusercontent.com/7543552/53696610-7ca29600-3dd1-11e9-87ab-f67471a9398c.png)
+
+![screenshot 26](https://user-images.githubusercontent.com/7543552/53696611-7d3b2c80-3dd1-11e9-85a2-460f7c5dc993.png)
+
+</details>
+....
+
+[[issue-243]]
+=== #243 — setNode rank has no effect in your example
+
+_none_ | comments: 1 | created: 2018-06-19 | https://github.com/dagrejs/dagre/issues/243
+
+....
+starting with your example at https://dagrejs.github.io/project/dagre-d3/latest/demo/clusters.html
+
+I merely modified the edges then tried added rank to try and get node E to be at the top of the graph with node A.  http://jsfiddle.net/wolf1/5nepm3vk/
+
+No matter how I use the 'rank' attribute, it has no effect. I tried looking at your test cases in the repository under test/ but nothing worked.
+
+Is there a way to get node E to be at the top of the graph with A ?
+....
+
+[[issue-241]]
+=== #241 — Cluster / Subgraph issue
+
+_none_ | comments: 1 | created: 2018-04-07 | https://github.com/dagrejs/dagre/issues/241
+
+....
+Layout works for 80% of the graph, but then it looks like it gives up on positioning the vertices inside the correct clusters:
+
+![image](https://user-images.githubusercontent.com/966863/38452311-9bde0078-3a39-11e8-8b9a-787168a2eabe.png)
+....
+
+[[issue-240]]
+=== #240 — Can you provide a demo ?
+
+_none_ | comments: 1 | created: 2018-04-03 | https://github.com/dagrejs/dagre/issues/240
+
+....
+Can you provide a demo, please?
+Such the developers with a low level of Technology can learn quickly
+....
+
+[[issue-216]]
+=== #216 — NaN on iOS
+
+_none_ | comments: 1 | created: 2017-07-19 | https://github.com/dagrejs/dagre/issues/216
+
+....
+Hello I have an issue on iOS(only)
+
+File: dagre/dist/dagre.core.js
+Line: 2137
+xs = _.mapValues(xs, function(x) { return -x; }); 
+When x = 0 then function returns -0 and after putting this value to Array it filled with NaNs
+result={1:"test"}
+result[5]=-0
+result={0:NaN, 1:"test", 2:NaN, 3:NaN, 4:NaN, 5:-0}
+
+Used iOS version 10.3.2
+
+Thanks
+Pavel
+....
+
+[[issue-213]]
+=== #213 — LRL or TBT rankDir?
+
+_none_ | comments: 1 | created: 2017-04-25 | https://github.com/dagrejs/dagre/issues/213
+
+....
+Is it possible to get an LRL or TBT rankDir layout where a tree can have it's root node in the middle and roughly half of the children are to the left (or above) and the other half are to the right (or below)?
+....
+
+[[issue-209]]
+=== #209 — the signatures of Graph interface is outdated
+
+_none_ | comments: 1 | created: 2017-01-26 | https://github.com/dagrejs/dagre/issues/209
+
+....
+The interface declaration of Graph in index.d.ts file which is located in the node_modules/@types/dagre folder is outdated and doesn't match graphlib. I am using graphlib 1.0.7
+....
+
+[[issue-207]]
+=== #207 — layout(g, opts) may not work
+
+_none_ | comments: 1 | created: 2016-11-25 | https://github.com/dagrejs/dagre/issues/207
+
+....
+The wiki states:
+
+> The layout can be configured by either setting the properties in the table below on the appropriate objects in the graph or by passing a second arg to layout with these properties set. The latter takes precedence.
+
+but did not work, and having a look the source code of "function layout(g, opts)" it seems that the opts are not used (but for timing debugging)
+....
+
+[[issue-196]]
+=== #196 — Control of cluster positioning
+
+_none_ | comments: 1 | created: 2016-02-16 | https://github.com/dagrejs/dagre/issues/196
+
+....
+I know that clustering support is experimental but I thought I'd write to the list to see if there are any hints to get my examples working.
+
+I have a complex graph of dependencies - a screenshot of which is below. However, I would really like to have the clusters/parent nodes in columns left-to-right. However, as you can see the 4th and 5th clusters (in purple) always seem to be ranked/laid-out on an additional level below the original three clusters.
+
+I've tried experimenting through the various options available, be it setting rank, minrank, maxrank, etc from the dagre test examples but these do not seem to be helping. I believe most of these params are being filtered out during the dagre 'buildLayoutGraph' call anyway.
+
+Is there any way to influence the existing dagre to get a layout closer to the one I'm after? Alternatively, is there an alternate JS library which might be more suited to this?
+
+![screen shot 2016-02-16 at 13 31 45](https://cloud.githubusercontent.com/assets/1526703/13077805/fcded134-d4b2-11e5-8990-3a44756d3d61.png)
+....
+
+[[issue-191]]
+=== #191 — Control over node layout; relative node positioning
+
+_none_ | comments: 1 | created: 2015-11-23 | https://github.com/dagrejs/dagre/issues/191
+
+....
+Dagre so far is pretty awesome, but doesn't quite entirely fill my current requirements. I need to  layout the nodes top-down restricted to a vertical line/column and have auxiliary nodes on the same y height and vertically aligned to the middle column. Having the edges converge on a common destination would also be a boon.
+
+What would it take to implement this? Is there anything in place to facilitate this functionality or what would be the best place to start? 
+
+I started working on a python script to do this. And this is as far as i got and then I found Dagre. 
+http://jsfiddle.net/8q4n92jb/
+
+Any pointers are greatly appreciated!
+
+ASCII version in case the link ever goes down
+
+```
+--------------------------------------------------
+columns1      |     column2     |     column3
+--------------------------------------------------
+              |                 |     aux_el1.1
+   text       |        el1      |     aux_el1.2
+              |                 |     aux_el1.3
+              |                 |
+              |       el2...    |
+```
+....
+
+[[issue-182]]
+=== #182 — Possibility of calculating bounding box for text
+
+_none_ | comments: 1 | created: 2015-05-24 | https://github.com/dagrejs/dagre/issues/182
+
+....
+Hi,
+
+when I add a node, I have to specify the size, do you think it's possible to not specify the size and the lib calculating it using the label and style?
+
+Thanks
+....
+
+[[issue-173]]
+=== #173 — How to hover over node and change text background
+
+_none_ | comments: 1 | created: 2015-03-03 | https://github.com/dagrejs/dagre/issues/173
+
+....
+I am trying to set a :hover style for my nodes to change the fill color.  But when my mouse hovers over the node's text, the rectangle background goes back to its non-hover state.  My style is defined as:
+    svg { border: 1px solid #ccc; overflow: hidden; margin: 0 auto; }
+    .node rect { stroke: black; fill: none; }
+    .node rect:hover { fill: lightgray; stroke-width: 3px; }
+    .node text:hover { fill: darkblue; stroke: darkblue; }
+
+When the mouse is over the rectangle's border, the entire rectangle background turns lightgray, but the text remains the same color.  When I move the mouse over the node's text, the color changes to darkblue, but the rectangle's lightgray background color goes away.  And there seems to be a "dead zone" between inside the rectangle border and the start of the text area, where the entire style goes to its non-hover state.
+
+All I want to do is change the "overall" style of the node when I hover over it:  make the the rectangle border and text "fatter" and a different color, and change the background color of the node.  What am I missing?
+....
+
+[[issue-171]]
+=== #171 — Suboptimal layout for simple case
+
+_none_ | comments: 1 | created: 2015-02-18 | https://github.com/dagrejs/dagre/issues/171
+
+....
+Consider this example:
+http://jsfiddle.net/964274dL/1/
+with following edges
+
+```
+ var edges = [[25,23],[58,31],[20,37],[129,37],[26,50],[31,57],[26,65],[23,129],[158,157],[159,157],[160,158],[160,159],[174,165],[186,182],[242,182],[248,184],[169,188],[255,188],[199,215],[199,224],[255,224],[276,233],[225,241],[248,257],[270,257],[272,271],[271,276]];
+```
+
+If you look at the right part of the image, you can see several "suboptimal" features:
+- the arrow from 255 to 188 has an unnecessary turn, 
+- the arrow from 225 to 241 is a separate component of the graph and thus it does not have to intersect anything, but it does
+
+Am I doing something wrong?
+It seems to me that above issues could be solved by swapping neighbouring nodes with each other, which I believe is one of simplest heuristics.
+....
+
+[[issue-162]]
+=== #162 — Layout with a set of predefined nodes positions?
+
+_none_ | comments: 1 | created: 2014-11-19 | https://github.com/dagrejs/dagre/issues/162
+
+....
+@cpettitt I wonder if it would be possible to start a layout with certain nodes that have a predefined position?
+The goal is to incrementally render dot files that are eventually too big to display (and process reasonably by graphviz). So the approach would be to render some nodes and the support some nav "expand nodes" and then remove some nodes and add new ones based on that navigation.
+The nodes that would be expanded would keep their original position, the new added nodes/edges would need layout. Removed nodes/edges would be removed from the display.
+Does this sounds crazy?
+....
+
+[[issue-132]]
+=== #132 — Support for rendering labels next to edges, while ensuring edges never cross labels
+
+_none_ | comments: 1 | created: 2014-08-13 | https://github.com/dagrejs/dagre/issues/132
+
+....
+Would it be possible to modify `dagre` to achieve the title goal: rendering labels next to edges, instead of on top of them? My use case is that I have reasonably large labels (say 6 lines of 30 characters) and they tend to obscure the edges.
+....
+
+[[issue-114]]
+=== #114 — Node (re)order question
+
+_none_ | comments: 1 | created: 2014-03-07 | https://github.com/dagrejs/dagre/issues/114
+
+....
+I am trying to accomplish something like this: 
+
+http://i.imgur.com/SzVlkqO.png
+
+I've got this so far: http://i.imgur.com/GJDQqiX.png
+
+Don't mind the edges, I know those are not supported and I have to write the algorithm for them. But I am wondering if there is some way to place the 3rd node at the top and the 4th node at the bottom in the 2nd  column? I've seen there are sub-graphs, but those are not applicable (I think) in this case.
+....
+
+[[issue-110]]
+=== #110 — Add support for edges without constraint
+
+_none_ | comments: 1 | created: 2014-02-15 | https://github.com/dagrejs/dagre/issues/110
+
+....
+I'd like to have support for edges that don't add a constraint during rank assignment.
+
+This is also being discussed in the user forum: http://goo.gl/pTdHja
+I've created a test scenario in plunker: http://plnkr.co/P1rHHy
+....
+
+[[issue-506]]
+=== #506 — Open up the internal API
+
+_none_ | comments: 0 | created: 2026-01-15 | https://github.com/dagrejs/dagre/issues/506
+
+....
+It would be very useful if the functions of the layout pipeline in runLayout() were also exposed, so users can customise the pipeline to their own needs. For example, I need a custom version of acyclic. I'd like to use the rest of the library as-is, but can't, and instead have to copy or reimplement all of the code.
+....
+
+[[issue-505]]
+=== #505 — Center align nodes left to right
+
+_none_ | comments: 0 | created: 2026-01-08 | https://github.com/dagrejs/dagre/issues/505
+
+....
+Hello,
+
+Thank you for an amazing library. I am using it in combination with foblex flow. 
+
+Please can you assist me with center aligning the nodes on a left to right diagram?
+
+When there is more than one node it center aligns it but when there is only one node, it is top aligned? 
+
+<img width="450" height="186" alt="Image" src="https://github.com/user-attachments/assets/8974e5c4-4feb-4ed3-af48-2e297da99070" />
+<img width="668" height="149" alt="Image" src="https://github.com/user-attachments/assets/a23c1344-92ad-4e21-aadf-8c0f858f514f" />
+
+Any help would be greatly appreciated.
+....
+
+[[issue-503]]
+=== #503 — npm publishing via github action and trusted publishing
+
+_none_ | comments: 0 | created: 2025-12-08 | https://github.com/dagrejs/dagre/issues/503
+
+....
+Hey, thanks for the package, good work. Following recent hacks on npm packages, I would greatly appreciate it if we could automate the release process of this package and utilize [trusted publishing](https://docs.npmjs.com/trusted-publishers), as recommended by npm. This would increase the trust level of this package, which is particularly handy when combined with pnpm, as it can check if a package loses trust, for example, when it gets compromised.
+
+Of course, if this is something you agree on, I could contribute the release pipeline.
+....
+
+[[issue-482]]
+=== #482 — Support for fixed edge direction and stable edge positions when node height changes
+
+_none_ | comments: 0 | created: 2025-07-30 | https://github.com/dagrejs/dagre/issues/482
+
+....
+<img width="728" height="795" alt="Image" src="https://github.com/user-attachments/assets/0d061763-b256-432e-aa58-ef436a8665e2" />
+
+Hi there! I'm currently using Dagre to lay out a graph with conditional logic nodes and I've run into a couple of issues that I'd like to clarify or possibly suggest as feature improvements:
+
+1. Fixed edge direction based on edge type
+In my graph, I have nodes with conditional logic (e.g., decision nodes).
+
+I'd like to always position the condition_yes edge to the right of the source node and the condition_no edge to the left.
+
+I understand that Dagre automatically computes the layout, but is there a recommended way (or future plan) to support custom edge positioning based on edge data?
+
+2. Edge stability when node height changes
+I'm dynamically calculating the height of some nodes based on their content (e.g., varying amounts of text).
+When this happens, the edges connected to these nodes sometimes shift their attachment points, which visually breaks the expected flow.
+
+Here is my following code:
+
+```
+export const getLayoutedElements = (nodes, edges) => {
+  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 330, ranksep: 165 });
+
+  nodes.forEach(node => {
+    dagreGraph.setNode(node.id, { width: node.measured?.width || 300, height: node.measured?.height || 200 });
+  });
+
+  edges.forEach(edge => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const newNodes = nodes.map(node => {
+    const nodeWidth = node.measured?.width || 300;
+    const nodeWithPosition = dagreGraph.node(node.id);
+    const newNode = {
+      ...node,
+      targetPosition: 'top',
+      sourcePosition: 'bottom',
+      position: {
+        x: nodeWithPosition.x - nodeWidth / 2,
+        y: nodeWithPosition.y - node.measured?.height / 2
+      }
+    };
+
+    return newNode;
+  });
+
+  return { nodes: newNodes, edges };
+};
+```
+
+I understand that if i changed `y: nodeWithPosition.y - node.measured?.height / 2` to `y: nodeWithPosition.y`, my nodes at the same rank will always be at the same y position, but nodes with large heights will overlap next nodes.
+
+Is there a way to preserve the edge anchor points or direction even if the node height changes after layout calculation?
+
+Let me know if this is already supported or if it would make sense to explore as a potential enhancement.
+
+Thanks in advance!
+....
+
+[[issue-480]]
+=== #480 — Object.hasOwn  in older versions of Safari. not work : error message is   Object.hasOwn   is not function
+
+_none_ | comments: 0 | created: 2025-07-10 | https://github.com/dagrejs/dagre/issues/480
+
+....
+Object.hasOwn  in older versions of Safari. not work : error message is   Object.hasOwn   is not function
+....
+
+[[issue-475]]
+=== #475 — type `configUnion` is confusing, fed into layout function?
+
+_none_ | comments: 0 | created: 2025-04-29 | https://github.com/dagrejs/dagre/issues/475
+
+....
+[Playground Link](https://www.typescriptlang.org/play/?#code/JYWwDg9gTgLgBAbzgZVGANsAZgTzgXziyghDgCIYcwBTAWixoGcZyBuAKDWniQHMoAQzAALTACMCREmXIABACaCBNAFZMA9EpXsOHOHBoAPSLDjAAdjBpQsggMY04AcSGiAMoPE10ifQbgAd2AFGBEAfgAuOAsAVxBvKDgAHzhYiwUaLEsaBU4AuBEaYD4RGCiY+MSUtIysnLz-A3tSSHSFCvEICHQaQQsa9vqLXPyAoQsAawVgKAqWKEs+QbrskcaCwUw+C3mYRYtl1KG10aaYiEymGjAKuISbFczTjYDcvmYbu6rH49WGsYGCaTa63aL3ap-Z4A84gQRQPiWIzfB5JKHDM4FOEIyw4FGQ2rQ9aAuAOHD2TCOObRBZLJ4Y15A-qTGx7A5HQkMsb4PQGYymeCWay2BxOABylxoAGEIBZsssEOdgqEIuCfmjOS8SUUSmV8b9NTCDDz-PyeOYrDY7I44ABRBQfGVykp+LGWXq7NWo+lapXFUrlL0Ek5GgLKsL6jUh4nnHUByM+0MGdBeHyQJgVADk6EzNUz9lzqUzUELhpjBRT3nQECwjBYCfRvuNvMMJnNQqtorgnhwEFiMCd8tdAXssRYpAA8lBMtS4AAKATCETRReiCQAOlcS4ANHBoDPogu3Mu4KuxMBxJvj7uIGAYExoi1nXwAKoWYCygCUcAAvAA+OAADcIBCb9-yAkDGTgGYmC8XoJzvUAtinGcAAkaFiRYWGAexOm6Xp+m5FsqFoOAn3lN8PwGH8UDQTBcAAHi3DxU18AAyOAJUyQcXQ4+1HVlIcOJ7PsB0Eko-zGDQNAKAA9cIWzNMxMgpeEnCwdJ7BgKi4BTXt+yPJcV2PDdmJEXc9NEipyJKSiv2iYCQjGIA)
+
+The [intersection type](https://www.typescriptlang.org/docs/handbook/2/objects.html#intersection-types) is a bit confusing.  I'm new to dagre, and I see the `width` and `height` types on three different interfaces.  So what is the width property of the configUnion applied to - the graph, the nodes, or the edges?
+
+If it was something like this:
+
+```typescript
+export interface ConfigInterface {
+  graphConfig: GraphLabel;
+  defaultNodeConfig: NodeConfig;
+  defaultEdgeConfig: EdgeConfig
+  layoutConfig: LayoutConfig
+}
+```
+
+that would make sense.
+
+I'm just confused by this type definition.
+....
+
+[[issue-469]]
+=== #469 — Deprecate `dagre` package on NPM
+
+_none_ | comments: 0 | created: 2025-02-18 | https://github.com/dagrejs/dagre/issues/469
+
+....
+The [`dagre`](https://www.npmjs.com/package/dagre) package is still published on NPM as if it was supported. It would probably be a good idea to [deprecate it](https://docs.npmjs.com/deprecating-and-undeprecating-packages-or-package-versions) and direct users to the new `@dagrejs/dagre` package.
+....
+
+[[issue-465]]
+=== #465 — Setting nodesep to be invalid due to excessive spacing between child nodes
+
+_none_ | comments: 0 | created: 2024-12-11 | https://github.com/dagrejs/dagre/issues/465
+
+....
+## Environments
+* @dagrejs/dagre Component version:1.1.4
+
+Hello, could you please take a look at this demo
+[demo](https://codesandbox.io/p/devbox/dagreexample-cwpvq4?file=%2Fsrc%2Fcomponents%2FDagreExample.vue%3A282%2C77)
+
+How to solve the problem of excessive spacing between sub nodes of "Station" when the sub node "material cart" is not displayed and the node spacing is normal when the material cart is displayed
+![img-1](https://github.com/user-attachments/assets/05a65589-d220-49c8-9e75-45ece38f0751)
+![img-2](https://github.com/user-attachments/assets/dc54a350-e5dc-49cb-b27b-d09a60239428)
+....
+
+[[issue-464]]
+=== #464 — Edge overlap problem
+
+_none_ | comments: 0 | created: 2024-12-11 | https://github.com/dagrejs/dagre/issues/464
+
+....
+Question: "When using dagre.layout(g) for layout in complex graphs, edge overlap issues occur. Are there any good methods to address this? When the graph is complex, it becomes difficult to view.
+![WechatIMG854](https://github.com/user-attachments/assets/52dbbf71-fd06-43ee-bc67-4f6d49676e79)
+....
+
+[[issue-460]]
+=== #460 — how to add a picture/image into a node?
+
+_none_ | comments: 0 | created: 2024-11-14 | https://github.com/dagrejs/dagre/issues/460
+
+....
+i tried to use html ,but image doesnot show out.
+my codes like this:
+that.nodes.forEach(node => {
+ g.setNode(node.name, {
+				id: node.name,
+				width: nodeWidth, height:nodeHeight,
+				// label: node.nodeName,
+				labelType: "html",
+				label: `<div  style="width:${nodeWidth}px;height:${nodeHeight}px; word-break:break-all;white-space:normal;word-wrap:break-word;">`+
+				 (node.avatar? `<image  style="width:${img_w}px;height:${img_h}px;display:inline-block;" src:"${node.avatar}" />`:"")+
+												        ` <div  style="display:inline-block;"> <p style="text-align:center;margin: 2px 0;font-size: large;">` +
+					node.title +
+					// (node.level? ( "【"+node.level+"】"):"")+
+					level+
+					`</p>
+												          <p style="text-align:left;margin: 7px 0;">` +
+					(node.desc||"") +
+			
+					`</p>
+							</div> </div>`,
+				shape: 'rect', //节点形状，可以设置rect(长方形),circle,ellipse(椭圆),diamond(菱形) 四种形状，还可以使用render.shapes()自定义形状
+				style: (node.level?'fill:yellow;stroke:#fff': 'fill:#61b2e4;stroke:#fff'), //节点样式,可设置节点的颜色填充、节点边框
+				labelStyle: 'fill: #fff;font-weight:bold', //节点标签样式, 可设置节点标签的文本样式（颜色、粗细、大小）
+				rx: 5*rate1, // 设置圆角
+				ry: 5*rate1, // 设置圆角
+				paddingBottom: 15*rate1,
+				paddingLeft: 20*rate1,
+				paddingRight: 20*rate1,
+				paddingTop: 15*rate1,
+			})
+	
+			;
+	});
+....
+
+[[issue-454]]
+=== #454 — Reposition main node that all others flow into 
+
+_none_ | comments: 0 | created: 2024-09-26 | https://github.com/dagrejs/dagre/issues/454
+
+....
+I'm currently working on a project to implement react-flow using dagre to automate the layout and I'm running into an issue where the "Home Node", the node that everything flows into, is on the left hand side, instead of the bottom.
+
+here’s a link to my code sandbox where I have this set up, Any help appreciated
+
+[Link to React code sandbox](https://codesandbox.io/p/sandbox/react-flow-sample-7dvk7l)
+
+
+How my flow chart is currently 
+![IMG_0608](https://github.com/user-attachments/assets/e20b36fb-b49e-409b-9476-772f9877b959)
+
+desired outcome
+<img width="962" alt="IMG_0609" src="https://github.com/user-attachments/assets/14aeb25f-b35c-4e48-ace8-a35f2285c9c0">
+....
+
+[[issue-443]]
+=== #443 — layout align problems
+
+_none_ | comments: 0 | created: 2024-06-17 | https://github.com/dagrejs/dagre/issues/443
+
+....
+I noticed that the align property in the current layout configuration only supports 4 attributes: UL, UR, DL, or DR. Can it be extended to support all 8 directions, such as U, L, R, and D?
+....
+
+[[issue-425]]
+=== #425 — Child nodes after layout cannot be aligned horizontally
+
+_none_ | comments: 0 | created: 2023-09-21 | https://github.com/dagrejs/dagre/issues/425
+
+....
+<img width="1087" alt="image" src="https://github.com/dagrejs/dagre/assets/61576426/ac4f9b7c-f927-4485-8af6-847ecf2f9876">
+
+I want node 2a and node 2c to be aligned horizontally. 
+
+This is a reproducible demo:
+https://codesandbox.io/s/recursing-shtern-jg7xr6?file=/App.js
+....
+
+[[issue-358]]
+=== #358 — Why do these edges cause errors?
+
+_none_ | comments: 0 | created: 2023-08-28 | https://github.com/dagrejs/dagre/issues/358
+
+....
+Very apologies if this has been asked before somewhere. I did look for a similar issue.
+
+I'm trying to understand how dagre works behind the scenes, the math and formulation and that, in the hopes that I might understand why the following graph(s) fail:
+```
+// Set the nodes
+g.setNode('a', {
+  label: 'A'
+});
+g.setNode('b', {
+  label: 'B'
+});
+g.setNode('c', {
+  label: 'C'
+});
+g.setNode('d', {
+  label: 'D'
+});
+// Set the parents
+g.setParent('b', 'a');
+g.setParent('c', 'b');
+
+// These edges cause errors:
+//g.setEdge('a', 'b');
+//g.setEdge('a', 'c');
+//g.setEdge('a', 'd');
+//g.setEdge('b', 'c');
+//g.setEdge('a', 'a');
+//g.setEdge('b', 'b');
+
+// These edges don't cause errors
+//g.setEdge('c', 'd');
+//g.setEdge('d', 'c');
+//g.setEdge('c', 'c');
+//g.setEdge('d', 'd');
+```
+[Here](https://jsfiddle.net/g3cepq0d/) is a jsfiddle to demonstrate, just uncomment an edge that causes an error.
+
+Any insights anyone has to offer would be appreciated. I'm interested in learning how dagre works from theory up if I have to to solve this. And if I do solve it I would happily contribute the fix.
+
+Thanks!
+....
+
+[[issue-356]]
+=== #356 — Consider using webgpu rewriting?
+
+_none_ | comments: 0 | created: 2023-08-01 | https://github.com/dagrejs/dagre/issues/356
+
+....
+Dagre's performance will decrease when processing large amounts of data (such as 5k+ nodes/edges);
+
+With the emergence of ```webgpu```, have you considered using ```computeShader``` to rewrite the core logic of dagre and attempting to remove some unnecessary layout logic.
+....
+
+[[issue-355]]
+=== #355 — Accessibility: allow for usage of rem or px in height and width
+
+_none_ | comments: 0 | created: 2023-07-26 | https://github.com/dagrejs/dagre/issues/355
+
+....
+When using height and width in `px`, there can be issues with accessibility in regards to text-only zoom. Because text zooms and the edges around it do not, edges and nodes rendered with dagree mutate to odd angles and nodes overlap one another.
+
+To recreate the issue:
+
+- Open Firefox and turn on [text zoom only mode](https://support.mozilla.org/en-US/kb/font-size-and-zoom-increase-size-of-web-pages#w_how-to-only-change-the-size-of-the-text)
+- Visit `reactflow`'s [example](https://reactflow.dev/docs/examples/layout/dagre/) using `dagre`.  Open it in the code sandbox.  Change the text in the nodes to be longer for more of an effect.
+- Zoom in using browser controls.  Note that even though the text gets larger, the edges do not elongate to match.
+
+Allowing for the use of rems (`pxValue / 16`) will alleviate the text zoom issue and make this library more accessible to users with low vision, or anyone who needs it.
+....
+
+[[issue-349]]
+=== #349 — Odd looking long branches
+
+_none_ | comments: 0 | created: 2023-06-22 | https://github.com/dagrejs/dagre/issues/349
+
+....
+Hello everyone, I'm creating a layout using dagre as described in the documentation. I've noticed that in certain places, the layout behaves strangely and creates very long branches that shouldn't be there, resulting in an odd-looking layout. Is there any solution to address this issue?
+![relationship-map_99](https://github.com/dagrejs/dagre/assets/69648889/0f8c6dcd-4d73-441c-b64d-052a74b5f560)
+....
+
+[[issue-348]]
+=== #348 — How many number of nodes does dagre support?
+
+_none_ | comments: 0 | created: 2023-06-07 | https://github.com/dagrejs/dagre/issues/348
+
+_(no description)_
+
+[[issue-338]]
+=== #338 — How to set specific limit for number of child nodes in one row in parent node in dagre-d3?
+
+_none_ | comments: 0 | created: 2023-03-28 | https://github.com/dagrejs/dagre/issues/338
+
+....
+If a parent node have 40 child nodes, the current layout engine will put all of them in a single line.
+
+It will be very useful to setup a threshold for example 10, then Dagre can make the 40 nodes into 4 lines. The default threshold can be as high as 100.
+
+@scottyantipa   could you please help with this?
+....
+
+[[issue-336]]
+=== #336 — Original ordering is not respected in some cases when cross-count is already 0
+
+_none_ | comments: 0 | created: 2022-11-19 | https://github.com/dagrejs/dagre/issues/336
+
+....
+I have found a few cases where the ordering algorithm will permute the order of nodes unnecessarily. It does not further minimize edge crossings, because they are already at 0 with the given node ordering, but it does change the final layout in a way that goes against the provided node ordering.
+
+Here's a reproduction using `test/console.html`. You can see that the branch `should be` --> `below` should be ordered to the bottom of the graph.
+<img width="1470" alt="console-repro-bad" src="https://user-images.githubusercontent.com/3643611/202865169-0c5beb0e-6f2d-4612-8045-6929d4d85555.png">
+
+This seems to happen because `order/index.js` will run the cross minimization algorithm regardless of if the cross count is already 0. So the nodes get permuted for no reason, and just ends up in the end with a cross minimization of still 0. I tested this by adding an early return if cross minimization is 0 and get the desired result:
+<img width="1470" alt="console-show-fix" src="https://user-images.githubusercontent.com/3643611/202865218-e09a277d-b778-45a8-ba2d-f39b2514c095.png">
+
+The code for the fix is in #335. Unfortunately this breaks compound graph layout which I show in the PR.
+
+As a follow up note, this has perf implications because it isn't necessary to run the cross minimization iterations at all if it's already at 0 -- unless the cross minimization iterations are required for compound graphs, which could be the case since it breaks the compound graph layout. Another option would be to add an early return within the for-loop, eg to check if the cross minimization is 0 in each iteration and return early. I've noticed that this does not break compound graph layout, I guess because it allows us to run `sweepLayerGraph` at least 1.
+....
+
+[[issue-331]]
+=== #331 — dagre.layout(g) doesn't work
+
+_none_ | comments: 0 | created: 2022-07-07 | https://github.com/dagrejs/dagre/issues/331
+
+....
+When I follow the guide to use dagre in vue.js, I found all node were placed at the same position. What's the cause?
+<img width="483" alt="image" src="https://user-images.githubusercontent.com/50094666/177768966-0af28fdf-5272-4725-bb49-c5a1617c7a9d.png">
+....
+
+[[issue-330]]
+=== #330 — Edge position/ ordering 
+
+_none_ | comments: 0 | created: 2022-06-01 | https://github.com/dagrejs/dagre/issues/330
+
+....
+Hi,
+
+I've question about edge ordering position. I want to be able for a forked link, to be able to stack up edge in order. for example from the worst one to the best one. and the worst edge shall always appear on top of the better one.
+
+is it possible to acheive this with dagre for specifc part parent Node ? 
+
+Thanks
+....
+
+[[issue-327]]
+=== #327 — Recursive DFS implementations
+
+_none_ | comments: 0 | created: 2022-05-22 | https://github.com/dagrejs/dagre/issues/327
+
+....
+Hi dagrejs team,
+
+Thank you for the nice graph layout. I know this repository is deprecated, but this issue seemed reasonable to declare since many users might run into this problem.
+
+Many files (e.g., `lib\rank\feasible-tree.js`, `lib\rank\network-simplex.js`, `lib\rank\util.js`) in **dagre** contain DFS implementations. To the best of my knowledge they are all implemented in **recursive** fashion.
+
+While recursiveness comes with easier readability and less code, it also comes with limitations. One of them being the **limited stack size** on a machine.
+
+While using **dagre** with big graphs (3000+ nodes), I ran into `max call stack size` errors originating from these recursive DFS functions.
+
+It would be a good idea to rewrite the recursive DFS functions to iterative DFS functions.
+This way **dagre** users can use the **dagre** layout for their big graphs.
+....
+
+[[issue-323]]
+=== #323 — Customize width and height, set direction TB, up and down cannot center alignment, how to set 
+
+_none_ | comments: 0 | created: 2022-02-23 | https://github.com/dagrejs/dagre/issues/323
+
+....
+![image](https://user-images.githubusercontent.com/16129828/155252221-a748fef1-dac5-40e7-804b-40f5a5f112e1.png)
+....
+
+[[issue-316]]
+=== #316 — "pass a second argument to layout" is no longer accurate
+
+_none_ | comments: 0 | created: 2021-06-12 | https://github.com/dagrejs/dagre/issues/316
+
+....
+Forgive me if I'm missing something, but from the [wiki page](https://github.com/dagrejs/dagre/wiki#configuring-the-layout):
+
+> The layout can be configured by either setting the properties in the table below on the appropriate objects in the graph or by passing a second arg to layout with these properties set. The latter takes precedence.
+
+However, when I couldn't get any of it to actually _work_, I checked the source and found that they're more or less completely ignored: 
+
+https://github.com/dagrejs/dagre/blob/933822b991ea9b077521e5b797b8b4927c94f0a4/lib/layout.js#L20-L28
+
+Am I missing something here?
+....
+
+[[issue-311]]
+=== #311 — CI is broken
+
+_none_ | comments: 0 | created: 2021-01-15 | https://github.com/dagrejs/dagre/issues/311
+
+....
+CI is currently broken. This gives potential users a bad impression. The error is:
+
+```
+$ sh -e /etc/init.d/xvfb start
+sh: 0: Can't open /etc/init.d/xvfb
+The command "sh -e /etc/init.d/xvfb start" failed and exited with 127 during .
+```
+
+Suggest to fix CI or remove the CI badge.
+....
+
+[[issue-310]]
+=== #310 — options passed to layout not used
+
+_none_ | comments: 0 | created: 2020-12-09 | https://github.com/dagrejs/dagre/issues/310
+
+....
+The documentation at https://github.com/dagrejs/dagre/wiki#configuring-the-layout says "The layout can be configured by either setting the properties in the table below on the appropriate objects in the graph or by passing a second arg to layout with these properties set. The latter takes precedence." I want to use the second approach.
+
+But looking at the code at https://github.com/dagrejs/dagre/blob/76058e545939b4381f4e5f748f6f2f800a803479/lib/layout.js#L20 it seems that the only option that is used is `debugTiming`. Shouldn't that function do more with `opts`?
+
+I can set graph configuration properties on the object passed to `g.setGraph(opts)`, so that's an alternative.
+....
+
+[[issue-301]]
+=== #301 — Aligning nodes of same property in same column 
+
+_none_ | comments: 0 | created: 2020-05-26 | https://github.com/dagrejs/dagre/issues/301
+
+....
+Is it possible to change the coordinates of nodes in such a way that nodes with property A, B, and C align themselves in different columns while the edge connections remaining the same?
+....
+
+[[issue-298]]
+=== #298 — Specific imports from dagre cause TypeError
+
+_none_ | comments: 0 | created: 2020-05-12 | https://github.com/dagrejs/dagre/issues/298
+
+....
+I'm in a Typescript project. I've installed dagre (via `npm install dagre`) and installed type definitions as well. I'd like to define a graph in a particular file, so I
+
+```
+import { graphlib } from 'dagre';
+// ...
+this._g = new graphlib.Graph();
+this._g.setNode('foo', {label: 'bar'});
+// ...
+```
+
+vscode seems to see nothing wrong at any point, suggesting that type annotations are checking out, and so forth. When I run unit tests for the file in question, the import appears to fail, with a remarkable backtrace:
+
+```
+  ● Test suite failed to run
+
+    TypeError: Cannot read property 'preorder' of undefined
+
+    > 4 | import { graphlib, layout } from 'dagre';
+        | ^
+      5 |
+
+
+      at Object.<anonymous> (../node_modules/dagre/lib/rank/network-simplex.js:7:42)
+      at Object.<anonymous> (../node_modules/dagre/lib/rank/index.js:6:22)
+      at Object.<anonymous> (../node_modules/dagre/lib/layout.js:6:12)
+      at Object.<anonymous> (../node_modules/dagre/index.js:26:11)
+```
+
+Looking at `dagre/lib/rank/network-simplex.js` line 7, it's 
+
+```
+var preorder = require("../graphlib").alg.preorder;
+```
+
+so I suppose it's claiming that `alg` is undefined. I'm not exactly sure why this would be, or what an appropriate debugging workflow is: I don't have a deep understanding of the way that js/ts resolves dependencies. Thanks for any help you can offer.
+....
+
+[[issue-295]]
+=== #295 — (WebWorker) it is good to have all algorithm calculation or data manipulation inside "Web Worker"
+
+_none_ | comments: 0 | created: 2020-04-16 | https://github.com/dagrejs/dagre/issues/295
+
+....
+Thanks for the awsome lib.
+
+I have one use case, in which I have  **6000** nodes and to draw this graph(Lineage) lib do a lot of calculation and because of that javascript thread is in block state.
+
+if we implement [WebWorker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers) for all the calculation then it would improve the performance and UI will become unblocked.
+
+Version:
+
+    dagre-d3: v0.6.4
+
+dependencies: 
+
+    "d3": "^5.14",
+    "dagre": "^0.8.5",
+    "graphlib": "^2.1.8",
+    "lodash": "^4.17.15"
+....
+
+[[issue-291]]
+=== #291 — dagre.layout() giving negative values for some points
+
+_none_ | comments: 0 | created: 2020-03-23 | https://github.com/dagrejs/dagre/issues/291
+
+....
+I've added several nodes and edges to my graph, and when I call the layout function and look at all of the points, for one of the edges, three of the control points have a negative value:
+
+`{"points":[{"x":250,"y":69.48051948051948},{"x":-35,"y":125},{"x":-35,"y":200},{"x":-35,"y":275},{"x":525,"y":323.1967213114754}]}`
+
+The middle three points all have an x value of -35. Is there a way to ensure that all points in the generated layout are positive? I can provide additional information/context if it would be helpful.
+....
+
+[[issue-290]]
+=== #290 — How to add svg icon inside circle in dagre chart
+
+_none_ | comments: 0 | created: 2020-03-20 | https://github.com/dagrejs/dagre/issues/290
+
+....
+is there any way to add svg icon inside the node circle in dagrejs, currently i can able to add icon using <img> tag like `<img class="csp-icon" src="${srcImage}">,` but i want this way <div ng-include="${srcImage></div> to add dynamic class name to change color of the icon. 
+
+if i use "ng-include" in angular js component its not working.
+ 
+**Technology**: AngularJs 1.5
+
+please chek the below icons.
+
+so i want to change icon color black to white.
+ 
+<img width="179" alt="Screen Shot 2020-03-20 at 4 19 46 PM" src="https://user-images.githubusercontent.com/35930431/77157111-b7539b00-6ac6-11ea-8630-9fb1085b2b72.png">
+
+
+I tried with trustAsHtml() also but its giving some number.svg, please check below attachment
+<img width="759" alt="Screen Shot 2020-03-20 at 4 48 14 PM" src="https://user-images.githubusercontent.com/35930431/77159199-e704a200-6aca-11ea-86d2-bee1e141073f.png">
+....
+
+[[issue-288]]
+=== #288 — Support for record shapes and edge ports?
+
+_none_ | comments: 0 | created: 2020-03-05 | https://github.com/dagrejs/dagre/issues/288
+
+....
+Hello, this library looks very interesting. 
+I could not find in the wiki whether it supports record-like shapes, like those from graphviz mentioned [here](https://graphviz.gitlab.io/_pages/Gallery/directed/datastruct.html) and [here](https://emden.github.io/_pages/doc/info/shapes.html#record), and what graphviz calls edge ports, i.e. edge offsets from the center of the shape.
+
+And especially with left-to-right layouts. A common use case for this would be for example UML class diagrams, or database schemas. 
+Thank you
+....
+
+[[issue-285]]
+=== #285 — TypeError in layout() when a node ID is the string "length"
+
+_none_ | comments: 0 | created: 2019-12-19 | https://github.com/dagrejs/dagre/issues/285
+
+....
+This was detected in the real world in the TensorBoard graph visualizer per user report here: https://github.com/tensorflow/tensorboard/issues/1283
+
+Here is a full repro case against the most recent release of dagre, v0.8.5:
+https://jsbin.com/caciwelahu/1/edit?html,js,console,output
+
+The repro code and failure cases are as follows (based on example usage from the wiki):
+
+```js
+function test(n1, n2, n3) {
+  console.log("test: " + n1 + " " + n2 + " " + n3)
+  try {
+    // Create a new directed graph 
+    var g = new dagre.graphlib.Graph();
+
+    // Set an object for the graph label
+    g.setGraph({});
+
+    // Default to assigning a new object as a label for each new edge.
+    g.setDefaultEdgeLabel(function() { return {}; });
+
+    g.setNode(n1, {label: n1});
+    g.setNode(n2, {label: n2});
+    g.setEdge(n1, n2);
+    if (n3) {
+      g.setNode(n3, {label: n3});
+      g.setEdge(n1, n3);
+    }
+
+    dagre.layout(g);
+
+    g.nodes().forEach(function(v) {
+      console.log("Node " + v + ": " + JSON.stringify(g.node(v)));
+    });
+    g.edges().forEach(function(e) {
+      console.log("Edge " + e.v + " -> " + e.w + ": " + JSON.stringify(g.edge(e)));
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+
+// First succeeds; latter two emit null position values
+test("foo", "bar");
+test("foo", "length");
+test("length", "foo");
+
+// First succeeds; third emits null position values; second and third
+// fail in layout() with:
+// TypeError: Cannot set property 'x' of undefined
+test("foo", "bar", "qux");
+test("foo", "bar", "length");
+test("foo", "length", "bar");
+test("length", "foo", "bar");
+
+// First succeeds; latter fails in layout() with:
+// Error: Not possible to find intersection inside of the rectangle
+test("foo", "foo");
+test("length", "length");
+```
+
+Stepping through the TypeError stacktrace in the debugger, the error is produced in the `position()` function in this iteration:
+https://github.com/dagrejs/dagre/blob/3a451186266a666e07aca2302a1557291a92125b/lib/position/index.js#L13-L15
+
+Screenshot:
+![image](https://user-images.githubusercontent.com/710113/71136549-0cc39780-21ba-11ea-8e5a-82dc432ec1aa.png)
+
+The root cause is apparently that the lodash `_.forEach()` by design (https://github.com/lodash/lodash/issues/1172) treats an object with a `length` property as an array, which cases the iteration over the result of `positionX()` to be incorrect.  The solution would be patching that code to use `_.forIn()` instead per the lodash documentation.
+
+I'm guessing that fixing that
+
+_…(truncated; see URL)_
+....
+
+[[issue-282]]
+=== #282 — Overlapping Nodes
+
+_none_ | comments: 0 | created: 2019-10-04 | https://github.com/dagrejs/dagre/issues/282
+
+....
+We started to use Jonathan's demo and created a graph showing connections between people, and I have a displaying problem in a specific case.
+
+We have the following graph:
+https://cutt.ly/ZeupWkV
+
+![image](https://user-images.githubusercontent.com/15675000/66201914-c5db0100-e6a4-11e9-853b-8614890b87bd.png)
+
+
+To select the highlighted elements:
+
+- Select node 204
+- Left click, select descendants
+- Then hide the not selected nodes, and you get the following graph:
+
+![image](https://user-images.githubusercontent.com/15675000/66201929-d2f7f000-e6a4-11e9-8d03-62272d7ef76b.png)
+
+Now the 810 and 1064 nodes are overlapped.
+There is a 2 way connection (edge) between 204 and 1064, maybe this could couse the problem, but in the graph we don't want to eliminate these 2 way connections.
+Is there a way to manage not to overlap these nodes?
+
+Thanks for any help suggested.
+....
+
+[[issue-265]]
+=== #265 — Minified files contain comments
+
+_none_ | comments: 0 | created: 2019-04-25 | https://github.com/dagrejs/dagre/issues/265
+
+....
+The minifed files in the /dist folder still contain comments.
+Shouldn't they be stripped of those to be truly minified?
+
+(as #203 states the license should still be present, but the rest should be stripped IMHO)
+....
+
+[[issue-257]]
+=== #257 — how to place node in group with multi lines
+
+_none_ | comments: 0 | created: 2019-01-10 | https://github.com/dagrejs/dagre/issues/257
+
+....
+https://dagrejs.github.io/project/dagre-d3/latest/demo/clusters.html
+
+I see the demo in the url above. And in my scece, I have to place nodes with multi lines because the nodes are completely generated by backend server and there will be more than 100 nodes in one group and be placed in one line, it's really a bad experience。
+
+For example,  In the above url。node C D are in first line of bottom group and node E F are in the second line of bottom group。
+How can this framework enable user to set the columns of nodes in one group? Or will be a future plan?
+
+thanks.
+....
+
+[[issue-253]]
+=== #253 — ./lib/lodash.js file's require never transpile because of file naming
+
+_none_ | comments: 0 | created: 2018-10-18 | https://github.com/dagrejs/dagre/issues/253
+
+....
+It looks like require keyword never get transpile in **./lib/lodash.js** file because the filename is same as require content. I assume that's why there is a if statement wrap in attempt to fix it?
+
+the snippet below is not a good when multiple lodash version are used:
+`if (!lodash) {
+  lodash = window._;
+}
+`
+One example I encountered is that one of my dependency use lodash 3.X and it breaks this because this module use lodash 4.X features.
+
+Why does this file exist? Couldn't the other files import lodash directly in the context of this module instead of attempting to set it manually?
+
+I can submit a pull request to either:
+1. Remove this file and update all other **./lib/lodash.js** dependency to **require('lodash')**
+OR
+2. Update the file to lodash_wrap.js and update other respective locations
+....
+
+[[issue-251]]
+=== #251 — Swimlane support
+
+_none_ | comments: 0 | created: 2018-09-26 | https://github.com/dagrejs/dagre/issues/251
+
+....
+A nice feature would be an ability to lay out groups of nodes in swimlanes (columns or rows, depending on the orientation), commonly used in BPMN tools.
+
+- ~nodes should have an attribute identifying the lane they belong to, either as a direct attribute, or as a new parent-child structure on the graph which would allow nested lanes~
+
+Parent-child relationships are already supported and used with clusters.
+
+Assuming 4 main passes of the algorithm `rank`, `order`, `position` and `route` and swimlanes parallel to main flow, the following should be implemented:
+
+-  [`order` phase](https://github.com/dagrejs/dagre/blob/072411766e5cba8672e5945428bc08710e7cdcd5/lib/order/index.js#L29) should constrain a set of possible orderings to those that correspond to lane order. For example, if lane A contains nodes 1 and 2 and lane B contains node 3 in the same rank, then the only possible orderings are (1, 2, 3) and (2, 1, 3). (1, 3, 2), (2, 3, 1), (3, 1, 2) (3, 2, 1) are not allowed because node 3 belongs to lane B which comes after lane A
+....
+
+[[issue-246]]
+=== #246 —  prohibit the links between the nodes from overlapping ?
+
+_none_ | comments: 0 | created: 2018-07-20 | https://github.com/dagrejs/dagre/issues/246
+
+....
+how can i prohibit the links between the nodes from overlapping?
+![39997889-af305d3e-5784-11e8-9437-3c70bba17655](https://user-images.githubusercontent.com/29162735/42991053-c001f8fc-8c04-11e8-8e6a-500127b90b23.PNG)
+....
+
+[[issue-220]]
+=== #220 — NPM and Bower distributions seem to be different
+
+_none_ | comments: 0 | created: 2017-10-27 | https://github.com/dagrejs/dagre/issues/220
+
+....
+Bower release has only the dagre-core files in it !
+....
+
+[[issue-212]]
+=== #212 — bootstrap nodes
+
+_none_ | comments: 0 | created: 2017-03-04 | https://github.com/dagrejs/dagre/issues/212
+
+_(no description)_
+
+[[issue-206]]
+=== #206 — Is it possible to get graph data with nodes that come with given x,y?
+
+_none_ | comments: 0 | created: 2016-11-25 | https://github.com/dagrejs/dagre/issues/206
+
+....
+I would like to allow user to drag and drop nodes on screen,
+while they are doing that I'll keep updating the graph visuals, visuals including edges connected to dragging node and other dynamically packing nodes.
+
+So that means the nodes that user is dragging must set with given x,y,
+then recalculate the whole graph.
+
+for example:
+```
+g.setNode("kspacey",    { label: "Kevin Spacey",  width: 144, height: 100, x: 100, y:100 });
+```
+
+Thanks
+....
+
+[[issue-204]]
+=== #204 — Question about removing edge overlap minimization and hierarchy.
+
+_none_ | comments: 0 | created: 2016-11-17 | https://github.com/dagrejs/dagre/issues/204
+
+....
+Does anybody know if there is an easy way to make the layout of the graph more similar to that generated by graphviz dot? The graphs generated by dagre, while neat and orderly, often contain lots of extra space between elements do to the hierarchy (forcing nodes to be in-line with each other) and the minimization of edge overlap. Or does anyone no of some other similar graph layout library that will lay things out more like graphviz dot (but using input other than dot syntax)?
+....
+
+[[issue-203]]
+=== #203 — Minified file does not contain license
+
+_none_ | comments: 0 | created: 2016-10-05 | https://github.com/dagrejs/dagre/issues/203
+
+....
+[dagre.core.min.js](https://github.com/cpettitt/dagre/blob/master/dist/dagre.core.min.js) does not have a `@license` header. This makes it difficult to comply with your MIT license that requires the copyright notice be shipped with the code.
+
+If you put the following at the tops of your files, then your minifier tools should be smart enough to know what to do:
+
+``` js
+/**
+ * @license
+ * Dagre - Graph layout for JavaScript
+ * Copyright (c) 2012-2014 Chris Pettitt
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+```
+....
+
+[[issue-198]]
+=== #198 — Cells try to centralize with their row, breaking the normal layout of the graph.
+
+_none_ | comments: 0 | created: 2016-03-11 | https://github.com/dagrejs/dagre/issues/198
+
+....
+When there are a number of child cells branching off at two separate points in the graph, there seems to be something that is trying to re-layout these points, causing them try to group in more centralized points. This is causing very ugly and unwanted behavior. Does anybody know of a fix?
+
+Standard, expected layout:
+![screen shot 2016-03-11 at 4 03 43 pm](https://cloud.githubusercontent.com/assets/8505362/13718060/68065dd0-e7a3-11e5-8a7c-a5d731d3be5b.png)
+
+However, when the cell on the right is expanded, the new layout changes to this:
+![screen shot 2016-03-11 at 4 03 52 pm](https://cloud.githubusercontent.com/assets/8505362/13718064/74b94e70-e7a3-11e5-89a4-280a05bb0a21.png)
+Notice the cell (now on the left) now has some of it's branches reaching far off to the side, breaking the uniform layout that it had.
+....
+
+[[issue-194]]
+=== #194 — minimizing overlapping edges
+
+_none_ | comments: 0 | created: 2015-12-19 | https://github.com/dagrejs/dagre/issues/194
+
+....
+we were using the "orderRestarts" feature to effectively reduce the overlaps in our graphs, but this seems to be removed from the codebase at this time. is there an alternative ? what was the motivation ? could you make a hint on how to re-add or extend dagre to have a similar result ! thanks a lot !
+....
+
+[[issue-184]]
+=== #184 — Unexpected node position
+
+_none_ | comments: 0 | created: 2015-06-09 | https://github.com/dagrejs/dagre/issues/184
+
+....
+Hi, 
+
+I'm using cytoscape.js and your library to render a graph. I get an unexpected result.
+
+Why is node 4 positioned there?
+
+![octopus_-_google_chrome_2015-06-09_12-59-44](https://cloud.githubusercontent.com/assets/1754010/8064297/c88ee0bc-0ea7-11e5-8518-b90596ee0998.png)
+
+I was expecting something closer to this:
+
+![octopus_-_google_chrome_2015-06-09_13-05-46](https://cloud.githubusercontent.com/assets/1754010/8064397/6b2d03e4-0ea8-11e5-8709-7e3fa1af88d8.png)
+
+The cytoscape dataset is as follow:
+
+``` javascript
+{
+    "elements": {
+        "nodes": [
+            { "data": { "id": "47465", "name": "1" }},
+            { "data": { "id": "47466", "name": "2" }},
+            { "data": { "id": "47467", "name": "4" }},
+            { "data": { "id": "47468", "name": "5" }},
+            { "data": { "id": "47469", "name": "6" }},
+            { "data": { "id": "47470", "name": "7" }},
+            { "data": { "id": "47475", "name": "8" }},
+            { "data": { "id": "47477", "name": "9" }},
+            { "data": { "id": "47478", "name": "10" }},
+            { "data": { "id": "47479", "name": "3" }},
+            { "data": { "id": "47480", "name": "11" }},
+            { "data": { "id": "47481", "name": "12" }},
+            { "data": { "id": "48096", "name": "13" }}
+        ],
+        "edges": [
+            { "data": { "id": "47465:47466", "source": "47465", "target": "47466" }},
+            { "data": { "id": "47466:47479", "source": "47466", "target": "47479" }},
+            { "data": { "id": "47466:47468", "source": "47466", "target": "47468" }},
+            { "data": { "id": "47466:47469", "source": "47466", "target": "47469" }},
+            { "data": { "id": "47466:47475", "source": "47466", "target": "47475" }},
+            { "data": { "id": "47469:47470", "source": "47469", "target": "47470" }},
+            { "data": { "id": "47477:47478", "source": "47477", "target": "47478" }},
+            { "data": { "id": "47479:47467", "source": "47479", "target": "47467" }},
+            { "data": { "id": "47479:47475", "source": "47479", "target": "47475" }},
+            { "data": { "id": "47479:47477", "source": "47479", "target": "47477" }},
+            { "data": { "id": "47479:47480", "source": "47479", "target": "47480" }},
+            { "data": { "id": "47480:47481", "source": "47480", "target": "47481" }}
+        ]
+    }
+}
+```
+
+and the layout options are:
+
+``` javascript
+ { name: 'dagre', rankDir: 'TB', rankSep: 40, nodeSep: 100 }
+```
+....
+
+[[issue-181]]
+=== #181 — Drawing Dagre edges
+
+_none_ | comments: 0 | created: 2015-05-24 | https://github.com/dagrejs/dagre/issues/181
+
+....
+Hi, thanks for the lib,
+
+I am trying to draw the sample of yours in Wiki and here is the result:
+![dagre-samplepng](https://cloud.githubusercontent.com/assets/4734340/7788200/c2765e4e-01ff-11e5-909a-af4e39977634.png)
+
+I use your control point and fit a Bezier throw them. but it doesn't look very good to me. Is Bezier the right choice?
+
+Thanks
+....
+
+[[issue-176]]
+=== #176 — Edge lable positioning when source and tagrent node are identical
+
+_none_ | comments: 0 | created: 2015-04-09 | https://github.com/dagrejs/dagre/issues/176
+
+....
+Hi Chris!
+
+Thanks a lot for your great work on dagre!
+
+Have been looking to utilize labeloffset to get edge label positioning right on edges having identical source and target nodes. Obviously the offset is (re-)calculated taking into account the length of the edges' label (see attachment).
+
+It would be very helpful if you could point me into a direction which might result in a workaround or solution to this...
+
+thx in advance,
+best, Roland
+
+![i](https://cloud.githubusercontent.com/assets/1053994/7062136/9b2ceffc-de9a-11e4-8709-a46aec725de3.png)
+....
+
+[[issue-175]]
+=== #175 — Custom style override for graph edges not working in IE11
+
+_none_ | comments: 0 | created: 2015-03-05 | https://github.com/dagrejs/dagre/issues/175
+
+....
+This issue is seen both in IE10 and IE11, have not tested in other versions.
+
+Suppose I have common style applied to all edges through a style-sheet as below:
+.edgePath path{
+stroke :  #f00;
+stroke-width :  2px;
+}
+
+Then if i want to override this style for any particular edge, by passing the style through g.setEdge(..)
+The newly passed styles are not applied.
+
+The same issue also appears in the dagre-d3 style attributes demo page : http://cpettitt.github.io/project/dagre-d3/latest/demo/style-attrs.html
+( See Screenshot below )
+
+Is this a known issue in IE? 
+Is there any solution to solve this issue? 
+Any help is appreciated :)
+
+![ie-style-issue](https://cloud.githubusercontent.com/assets/5353319/6501717/d8f82442-c341-11e4-91c8-8525b510dc80.PNG)
+....
+
+[[issue-172]]
+=== #172 — Nice work. Made a canvas renderer
+
+_none_ | comments: 0 | created: 2015-03-02 | https://github.com/dagrejs/dagre/issues/172
+
+....
+Made a canvas renderer for dagre. Check it here:
+
+https://github.com/JosePedroDias/dagre-canvas
+....
+
+[[issue-170]]
+=== #170 — Node Overlap issue
+
+_none_ | comments: 0 | created: 2015-02-09 | https://github.com/dagrejs/dagre/issues/170
+
+....
+Hi guys,
+I am using dagre tree library from http://nlpviz.bpodgursky.com/home
+It will accepts json object to render the org chart.But the node are overlapping badly. can anyone help me please!!!
+
+JSON Object:
+
+{
+          "data": {
+              "type": "Lindiwe  Qoko  ( 8 ) - Community Member"
+          },
+          "children": [
+            {
+                "data": {
+                    "type": "Honey  Sopangisa  ( 10 ) - Community Member"
+
+```
+            },
+            "children": []
+        },
+        {
+            "data": {
+                "type": "Maureen  Qoko  ( 9 ) - Community Member"
+            },
+            "children": []
+        },
+        {
+            "data": {
+                "type": "Sejoalejoale  Setlaba  ( 14 ) - Community Member"
+            },
+            "children": []
+        },
+        {
+            "data": {
+                "type": "Olivia  Ngcezu  ( 15 ) - Community Member"
+            },
+            "children": [
+              {
+                  "data": {
+                      "type": "Nontembiso  Ngcezu  ( 20 ) - Member"
+                  },
+                  "children": [
+                    {
+                        "data": {
+                            "type": "Joseph  Sibiya  ( 22 ) - Member"
+                        },
+                        "children": []
+                    },
+                    {
+                        "data": {
+                            "type": "Qunisela  Rasmeni  ( 23 ) - Member"
+                        },
+                        "children": []
+                    },
+                    {
+                        "data": {
+                            "type": "Celinah  Ngonyowo  ( 24 ) - Member"
+                        },
+                        "children": []
+                    },
+                    {
+                        "data": {
+                            "type": "Jeritah  Malematja  ( 21 ) - Councillor"
+                        },
+                        "children": [
+                          {
+                              "data": {
+                                  "type": "Dibuweng  Matrose  ( 29 ) - Member"
+                              },
+                              "children": []
+                          },
+                          {
+                              "data": {
+                                  "type": "Matipane   Seshoka  ( 30 ) - Member"
+                              },
+                              "children": []
+                          },
+                   
+
+_…(truncated; see URL)_
+....
+
+[[issue-161]]
+=== #161 — dagre.layout() does not consume optional properties
+
+_none_ | comments: 0 | created: 2014-11-19 | https://github.com/dagrejs/dagre/issues/161
+
+....
+The optional properties that can be passed into dagre.layout() do not appear to be used or persisted (as described in the API docs).
+
+https://github.com/cpettitt/dagre/blob/master/lib/layout.js#L20
+
+Does not work:
+
+```
+dagre.layout(g, {rankdir: 'LR', edgesep: 40, ranksep: 40})
+```
+
+Does work:
+
+```
+g.setGraph({rankdir: 'LR', edgesep: 40, ranksep: 40})
+dagre.layout(g)
+```
+....
+
+[[issue-157]]
+=== #157 — Invalid orderings produced with clusters
+
+_none_ | comments: 0 | created: 2014-11-05 | https://github.com/dagrejs/dagre/issues/157
+
+....
+The initOrder function does not respect cluster constraints and thus produces a bad initial ordering. We sweep one direction, fixing all violations except for the starting rank. If there is no better solution found we end up using the bad ordering.
+....
+
+[[issue-143]]
+=== #143 — Edge offset handling
+
+_none_ | comments: 0 | created: 2014-09-14 | https://github.com/dagrejs/dagre/issues/143
+
+....
+Allow an edge label to be at one side of the spline or the other.
+....
+
+[[issue-138]]
+=== #138 — Expand the use of margins
+
+_none_ | comments: 0 | created: 2014-09-14 | https://github.com/dagrejs/dagre/issues/138
+
+....
+Currently we have marginx and marginy for the graph itself. We could expand this slightly to support the following options, grouped by precedence:
+- Individual sides
+  - margintop
+  - marginbottom
+  - marginleft
+  - marginright
+- Vertical / horizontal
+  - marginx
+  - marginy
+- All sides
+  - margin
+
+We should be able to apply these to:
+- graph
+- nodes
+- clusters
+- edge labels?
+....
+
+[[issue-136]]
+=== #136 — Support for sideways (flat) edges
+
+_none_ | comments: 0 | created: 2014-09-14 | https://github.com/dagrejs/dagre/issues/136
+
+_(no description)_
+
+[[issue-123]]
+=== #123 — cluster support: performance review
+
+`cluster` | comments: 0 | created: 2014-04-08 | https://github.com/dagrejs/dagre/issues/123
+
+....
+Performance on the benchmark graphs has degraded on the cluster branch. A performance review is warranted before merging this branch to master.
+....
+
+[[issue-120]]
+=== #120 — cluster support: fix self-loops in clusters
+
+`bug`, `cluster` | comments: 0 | created: 2014-04-07 | https://github.com/dagrejs/dagre/issues/120
+
+....
+This should be as easy as parenting all dummy nodes for self loops to the parent of the incident node. However, we cannot have any dummy nodes in the loop, so this also requires #118 or #119.
+....
+
+[[issue-119]]
+=== #119 — cluster support: alternative strategy for edge labels
+
+`cluster` | comments: 0 | created: 2014-04-07 | https://github.com/dagrejs/dagre/issues/119
+
+....
+Currently we're setting the minLen for all edges to 2 (and dividing rankSep in half), which gives us space to insert edge labels anywhere we need. This strategy is very wasteful if we don't need edge labels, it causes a huge increase in dummy nodes and slows down all subsequent algorithms. Ideally we'd only add ranks for edge labels where actually needed. Perhaps we could use the same strategy Sander uses for cluster border layers - reserve specific layers for edge labels and remove them if we find that they are empty.
+....
+
+[[issue-93]]
+=== #93 — Add documentation for constrained ranks feature
+
+_none_ | comments: 0 | created: 2013-10-15 | https://github.com/dagrejs/dagre/issues/93
+
+_(no description)_
+
+[[issue-88]]
+=== #88 — Improve code coverage for position algorithm
+
+_none_ | comments: 0 | created: 2013-10-03 | https://github.com/dagrejs/dagre/issues/88
+
+....
+Coverage is currently at only 70%!
+....
+
+[[issue-80]]
+=== #80 — Add API docs
+
+_none_ | comments: 0 | created: 2013-09-14 | https://github.com/dagrejs/dagre/issues/80
+
+_(no description)_
+
+[[issue-76]]
+=== #76 — demo-d3.html renders incorrectly in IE 9
+
+`bug` | comments: 0 | created: 2013-08-26 | https://github.com/dagrejs/dagre/issues/76
+
+....
+See attached image for example.
+
+![fireie1](https://f.cloud.github.com/assets/11766/1023393/8cb2dca0-0de7-11e3-95d9-77b355652cf2.JPG)
+....
+
+[[issue-10]]
+=== #10 — During y-positioning expand rank sep to avoid near-horizontal edges
+
+`enhancement` | comments: 0 | created: 2012-10-13 | https://github.com/dagrejs/dagre/issues/10
+
+_(no description)_

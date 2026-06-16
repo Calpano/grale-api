@@ -12,7 +12,7 @@ Dr. Max Völkel <mv@maxvoelkel.de>
 :idseparator: -
 
 [abstract]
-grale is a graph-layout API for TypeScript and a *strict superset of the dagre
+grale is a **gra**ph **l**ayout **e**ngine API for TypeScript and a *strict superset of the dagre
 serialised JSON structure* (graphlib's `json.write` format, latest `dagrejs/graphlib`,
 carrying `dagrejs/dagre` layout attributes). grale is defined as a *data format*
 — JSON in, JSON out — not as a class library. Any serialised dagre graph is a valid

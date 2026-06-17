@@ -804,10 +804,19 @@ engine — and the output additionally carries a `diagnostics` object, per-point
 any `crossings`, and a computed `zIndex`; otherwise the structure and result shape are
 identical. See the opening callout.)
 
+[[coordinate-model]]
 === Determinism & coordinate model
 
-* All coordinates are `number` (IEEE-754 `f64`), in CSS pixels, origin top-left.
+* All coordinates are `number` (IEEE-754 `f64`), in CSS pixels.
+* The coordinate system is *screen / SVG / Canvas*, not Cartesian: the origin is the
+  *top-left* corner, the **x-axis points right**, and the **y-axis points down**. A
+  larger `y` is therefore *lower* on screen, not higher. (This is the opposite of the
+  math convention where y points up — engines MUST NOT emit y-up coordinates.)
 * Node `x`/`y` is the node *centre*.
+* The flow of `rankdir` is defined against this axis: the default `rankdir: "TB"`
+  (top-to-bottom) runs along *increasing y* — a source sits at a smaller `y` than its
+  target. `"BT"` runs along decreasing y, `"LR"` along increasing x, `"RL"` along
+  decreasing x. (See <<preferred-directions>> for how `prefDir` rotates with `rankdir`.)
 * `layout` is a *pure function* of its input: equal request ⇒ equal output, except
   `diagnostics.elapsedMicros`. No wall-clock, network, or filesystem dependence.
 * `layout` does not mutate its argument; it returns a new envelope.

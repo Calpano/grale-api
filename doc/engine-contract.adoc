@@ -1,0 +1,98 @@
+= grale engine contract
+:toc:
+:icons: font
+:idprefix:
+:idseparator: -
+
+What any layout engine must do to be a *grale engine* — and to plug into this
+repo's comparison harness. The authoritative data format is
+link:graph-layout-api.adoc[the grale API spec]; this page is the short version
+of the *behavioural* contract.
+
+== The function
+
+An engine is one pure function:
+
+[source,ts]
+----
+layout(graph: graleGraph): graleGraph
+----
+
+JSON in, JSON out. It takes a grale request and returns the *same envelope* with
+the geometry filled in. It MUST NOT mutate its argument.
+
+== Process contract
+
+For tooling (the `compare` harness, `grale-to-svg`, scripts), an engine is a
+command that:
+
+* reads a grale JSON graph from **stdin**, and writes the laid-out grale JSON to
+  **stdout** (the universal form); _or_ accepts the input file path as an
+  argument — the harness substitutes it for `{}` in the command;
+* writes diagnostics and errors to **stderr**;
+* exits `0` on success, non-zero on failure.
+
+[source,bash]
+----
+cat input.json | my-engine            # stdin → stdout
+my-engine input.json                  # file arg (compare:  my-engine {})
+----
+
+== Input: accept any grale graph
+
+A grale request is a strict superset of the dagre `graphlib.json.write` envelope.
+An engine:
+
+* MUST accept *any* valid grale graph — including a plain serialised dagre graph —
+  and lay it out without edits;
+* MUST NOT crash on optional grale fields it does not implement. Unsupported
+  optional features (pins, stability, ports, markers, hyperedges, `cornerRadius`,
+  `prefDir`, compound graphs, …) are *accepted and echoed*, ideally with a
+  diagnostics warning, never a hard error;
+* MUST treat any label field under `meta` as opaque and pass it through untouched.
+
+== Output: fill in the geometry
+
+The result is the same envelope, enriched:
+
+* each node `value` gets `x` / `y` — the node **centre**, in pixels;
+* each drawn edge `value` gets `points: {x,y}[]` (a `hidden` edge gets none);
+* a hyperedge, if supported, gets `value.tree` (its routed point-tree);
+* the graph `value` gets `width` / `height` — the layout bounding box;
+* the envelope gets a top-level `diagnostics` object — at least `elapsedMicros`
+  and a (possibly empty) `warnings` array.
+
+=== Coordinate system (non-negotiable)
+
+Screen / SVG / Canvas coordinates, *not* Cartesian: origin **top-left**, x-axis
+points **right**, y-axis points **down** — a larger `y` is *lower* on screen.
+Engines MUST NOT emit y-up coordinates. The default `rankdir: "TB"` therefore runs
+along *increasing y* (a source sits at a smaller `y` than its target). See
+link:graph-layout-api.adoc#coordinate-model[the spec's coordinate model] for the
+full definition.
+
+== Determinism
+
+`layout` is a pure function: equal request ⇒ equal output, *except*
+`diagnostics.elapsedMicros`. No dependence on wall-clock, network, or filesystem.
+This is what makes a layout reproducible and lets the harness diff two engines
+fairly.
+
+== Plugging into the comparison harness
+
+`compare` treats dagre as the built-in baseline and any command as another engine:
+
+[source,bash]
+----
+npm run fixtures                         # (re)generate examples/inputs/*
+npm run compare -- mine="my-engine-cli"  # stdin/stdout engine
+npm run compare -- mine="my-engine {}"   # file-arg engine
+----
+
+Each engine's results are scored with `computeMetrics` and written under
+`examples/out/<engine>/`. See the link:../README.md[README] for the metric list.
+
+== See also
+
+* link:graph-layout-api.adoc[grale API] — the input/output data format.
+* link:dagre-js.adoc[dagre-js] — the baseline envelope grale supersets.

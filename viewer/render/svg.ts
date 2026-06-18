@@ -13,7 +13,7 @@
  * and the `diagnostics.warnings` list.
  */
 
-import type { EdgeLabel, NodeLabel, MarkerDef, graleGraph, DebugLayer, DebugNode, DebugShape } from '../types';
+import type { EdgeLabel, NodeLabel, MarkerDef, graleGraph, DebugLayer, DebugNode, DebugShape } from '../../api/types';
 
 export interface RenderOptions {
   /** Master switch turning on the default overlay set (positions, diagram area,

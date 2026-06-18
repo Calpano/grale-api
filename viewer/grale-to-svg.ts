@@ -8,8 +8,8 @@
  * error is reported and watching continues.
  */
 import { readFileSync, writeFileSync, watch } from 'node:fs';
-import { renderSvg, type RenderOptions } from '../grale/render/index.js';
-import type { graleGraph } from '../grale/types.js';
+import { renderSvg, type RenderOptions } from './render/index.js';
+import type { graleGraph } from '../api/types.js';
 
 interface Args extends RenderOptions {
   input: string;

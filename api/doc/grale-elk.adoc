@@ -208,7 +208,7 @@ pins, prefDir, hidden links, markers, debug, diagnostics). Neither is a superset
 
 == Running elk.js as a grale engine (adapter)
 
-*Implemented* at `src/cli/grale-elk.ts` (built-in engine `elk`, also `npm run elk`
+*Implemented* at `api/engines/grale-elk.ts` (built-in engine `elk`, also `npm run elk`
 / `grale-elk`). ELK fits the `xref:engine-contract.adoc[engine contract]` via this
 adapter that reads grale on stdin and writes grale on stdout:
 

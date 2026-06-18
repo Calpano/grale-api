@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SvelteMap } from 'svelte/reactivity';
-  import { renderSvg } from '../src/grale/render/svg';
-  import type { graleGraph, DebugLayer, DebugNode } from '../src/grale/types';
+  import { renderSvg } from './render/svg';
+  import type { graleGraph, DebugLayer, DebugNode } from '../api/types';
 
   let {
     graph = null,

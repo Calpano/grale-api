@@ -22,7 +22,7 @@
  */
 import { readFileSync } from 'node:fs';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import type { graleGraph, HyperedgePoint, HyperedgeSegment } from '../grale/types.js';
+import type { graleGraph, HyperedgePoint, HyperedgeSegment } from '../types.js';
 
 type Pt = { x: number; y: number };
 interface ElkN { id: string; width?: number; height?: number; x?: number; y?: number; children?: ElkN[]; edges?: ElkE[]; layoutOptions?: Record<string, string>; }

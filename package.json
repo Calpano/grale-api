@@ -5,35 +5,36 @@
   "description": "grale — a graph layout engine API, defined as JSON input/output types (a strict superset of the dagre serialised JSON structure), with an SVG renderer, engine adapters (dagre, elk), a CLI and a <grale-view> web component",
   "license": "MIT",
   "author": "Dr. Max Völkel <mv@maxvoelkel.de>",
-  "types": "./dist/grale/index.d.ts",
+  "types": "./dist/api/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/grale/index.d.ts",
-      "default": "./dist/grale/index.js"
+      "types": "./dist/api/index.d.ts",
+      "default": "./dist/api/index.js"
     },
     "./render": {
-      "types": "./dist/grale/render/index.d.ts",
-      "default": "./dist/grale/render/index.js"
+      "types": "./dist/viewer/render/index.d.ts",
+      "default": "./dist/viewer/render/index.js"
     },
     "./viewer/GraleView.svelte": "./viewer/GraleView.svelte",
     "./viewer/GraleElement.svelte": "./viewer/GraleElement.svelte"
   },
   "bin": {
-    "grale-to-svg": "./dist/cli/grale-to-svg.js",
-    "grale-dagre": "./dist/cli/grale-dagre.js",
-    "grale-elk": "./dist/cli/grale-elk.js"
+    "grale-to-svg": "./dist/viewer/grale-to-svg.js",
+    "grale-dagre": "./dist/api/engines/grale-dagre.js",
+    "grale-elk": "./dist/api/engines/grale-elk.js"
   },
   "files": [
     "dist",
-    "src",
-    "viewer"
+    "api",
+    "viewer",
+    "examples"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
-    "svg": "tsx src/cli/grale-to-svg.ts",
-    "dagre": "tsx src/cli/grale-dagre.ts",
-    "elk": "tsx src/cli/grale-elk.ts",
+    "svg": "tsx viewer/grale-to-svg.ts",
+    "dagre": "tsx api/engines/grale-dagre.ts",
+    "elk": "tsx api/engines/grale-elk.ts",
     "dev": "vite",
     "build:viewer": "vite build",
     "preview": "vite preview"

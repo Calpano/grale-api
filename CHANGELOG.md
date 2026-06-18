@@ -16,6 +16,12 @@ library, version numbers describe the specification, not a published package:
 ## [Unreleased]
 
 ### Changed
+- **Two-part layout.** The repo's two core parts are now top-level directories,
+  each with its own README and a delegating root README: `api/` (the JSON layout
+  contract types + the `grale-dagre` / `grale-elk` engine adapters + the spec
+  docs) and `viewer/` (the engine-independent SVG renderer, the `grale-to-svg`
+  CLI, and the `<grale-view>` web component). The `dist/` layout and the package
+  `exports` / `bin` targets moved accordingly (`dist/api/…`, `dist/viewer/…`).
 - **Repo split.** The evaluation framework (layout-quality metrics, the engine
   runner, snapshot runs, and the side-by-side compare app) moved to the separate
   `grale-eval` repo, which depends on this package via a `file:` link. This repo

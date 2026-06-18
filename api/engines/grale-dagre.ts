@@ -13,7 +13,7 @@
  */
 import dagre from '@dagrejs/dagre';
 import { readFileSync } from 'node:fs';
-import type { graleGraph } from '../grale/types';
+import type { graleGraph } from '../types';
 
 const DAGRE_OPTS = ['rankdir', 'align', 'nodesep', 'edgesep', 'ranksep', 'marginx', 'marginy', 'acyclicer', 'ranker'] as const;
 

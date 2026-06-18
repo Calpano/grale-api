@@ -14,7 +14,7 @@ const out = layout(graphJson);   // graleGraph -> graleGraph (positions filled i
 ```
 
 > **Status: specification — version 1.0.0.** This repository defines the API. The full normative
-> spec lives in [`doc/spec-grale-api.adoc`](doc/spec-grale-api.adoc); the dagre baseline it
+> spec lives in [`doc/graph-layout-api.adoc`](doc/graph-layout-api.adoc); the dagre baseline it
 > supersets is in [`doc/dagre-js.adoc`](doc/dagre-js.adoc). See
 > [`CHANGELOG.md`](CHANGELOG.md) for the release history.
 
@@ -88,7 +88,7 @@ dagre.
 | **Passthrough** | `meta` on any label for renderer data the layouter ignores |
 | **Debug** | `logLevel`, `visualDebug` |
 
-See the [full specification](doc/spec-grale-api.adoc) for every field, its type, default, and
+See the [full specification](doc/graph-layout-api.adoc) for every field, its type, default, and
 semantics, plus the TypeScript definitions and the compatibility matrix.
 
 ## TypeScript types
@@ -126,7 +126,7 @@ bounding box, and the `diagnostics.warnings`.
 **Web component** — a Svelte/Vite viewer exposing a `<grale-view>` custom element with pan/zoom:
 
 ```bash
-npm run dev          # dev harness: paste/drop JSON, toggle debug overlays
+npm run dev          # demo: render examples/sample.out.json with the viewer
 npm run build:viewer # bundle the viewer (and the <grale-view> element)
 ```
 
@@ -140,118 +140,38 @@ npm run build:viewer # bundle the viewer (and the <grale-view> element)
 See [`examples/sample.out.json`](examples/sample.out.json) for a result graph exercising
 markers, ports, a hyperedge, crossings and diagnostics.
 
-## Layout quality metrics
+## Engine adapters
 
-Score the geometry of a result graph — to compare layouts or guard against regressions:
-
-```ts
-import { computeMetrics } from 'grale/metrics';
-
-const m = computeMetrics(resultGraph);
-// m.nodeOverlap.area, m.edgeLength.total, m.crossings.count,
-// m.edgeNodeOverlap.length, m.boundingBox.area, m.bends.total,
-// m.flow.forwardRatio, m.angularResolution.minDeg, ...
-```
-
-| Metric | What it measures (lower is better unless noted) |
-|---|---|
-| `nodeOverlap` | node-box intersection area (px²), overlapping pairs, worst pair |
-| `minNodeGap` | closest gap between node boxes; 0 when any two touch/overlap |
-| `edgeLength` | total / mean / min / max / stdDev / `cv` (length uniformity) |
-| `crossings` | count, per-edge, mean crossing angle, mean deviation from 90° |
-| `edgeNodeOverlap` | edge length running through unrelated node boxes, and its share |
-| `bends` | real corners (turn > 1°): total, mean/edge, max, summed turning angle |
-| `boundingBox` / `hull` | drawing area, aspect ratio; convex-hull area + compactness |
-| `areaUtilization` | Σ node area ÷ bbox area (ink density, higher = denser) |
-| `angularResolution` | min angle between edges at a node (deg, higher = clearer) |
-| `flow` | directed-edge consistency vs `rankdir`: `forwardRatio`, backward count |
-
-Binary edges and hyperedges are measured together as *links* (a hyperedge contributes its whole
-routed point-tree to length, crossings, edge–node overlap, bends and angular resolution); `flow`
-stays binary-only. Compound clusters are excluded from the overlap metrics by default. CLI:
+grale ships two engines as CLI **adapters** that read a grale graph on stdin (or a file-path
+argument) and write the laid-out grale JSON on stdout — the
+[engine contract](doc/engine-contract.adoc):
 
 ```bash
-npx grale-metrics layout.out.json                 # full metrics for one file
-npx grale-metrics examples/fixtures/*.out.json     # comparison table across files
-npx grale-metrics layout.out.json --json           # machine-readable
+npx grale-dagre layout.json   # dagre (@dagrejs/dagre)
+npx grale-elk   layout.json   # elk.js — see doc/grale-elk.adoc
 ```
 
-## Comparing layout engines
+Both report their pure layout time in `diagnostics.elapsedMicros`. Any command that follows the
+same stdin → stdout contract (`{}` in the command = the input file path) is a grale engine, so
+cale or your own engine drops in the same way.
 
-A *run* lays one engine out over a set of input graphs and writes a timestamped **snapshot
-dir** under `examples/runs/<id>/` — the laid-out grale JSON per graph plus a `manifest.json`
-of per-graph metrics. You compare any two snapshot dirs (dagre vs cale, or cale PREV vs cale
-NOW).
+## Evaluation
 
-An engine is `dagre` or `elk` (both built in — `elk` wraps [elk.js](https://github.com/kieler/elkjs)
-via `src/cli/grale-elk.ts`, see [`doc/grale-elk.adoc`](doc/grale-elk.adoc)), or any command that
-reads a grale JSON graph and writes the laid-out grale JSON — stdin → stdout, or with `{}` in the command = the input file path. The
-repo hard-codes no engine but dagre. Inputs are **paths** — grale `.json` files or
-directories. The test graphs live in the
-[graph-test-data](https://github.com/Calpano/graph-test-data) repo under
-`json/grale/grale-1.0.0/` (format `grale-1.0.0` in the
-[graph-format-registry](https://github.com/Calpano/graph-format-registry)) — common shapes
-directly, and a `features/` subfolder exercising individual grale features (pinned, focus,
-prefDir, hidden links, weight/lineWidth, ports, markers, hyperedges, self-loops,
-cross-cluster compound, multigraph, cornerRadius/zIndex/meta; regenerate with
-`node scripts/gen-feature-data.mjs`). Other registry formats drop in when `GRAPHINOUT` is set
-to a converter command (e.g. `GRAPHINOUT='graphinout --to grale {}'`).
-
-### Interactive app
-
-```bash
-./run            # fresh clone → install, build, launch, open browser
-./run-cale       # same, but seed cale as a one-click engine preset (CALE_DIR overrides)
-npm run app      # launch (deps already installed)
-```
-
-Engines listed in a gitignored `compare.engines.json` (`{ "name": "command" }`) appear as
-**preset chips** in the run form (one click prefills name + command); `./run-cale` writes
-that file with cale's command. The same file is the CLI's default engine set.
-
-The Svelte app (backed by a Vite dev-server endpoint that spawns engines) lets you **run** an
-engine over the graphs from a form — pick a name, command, optional label, paths, and an
-**engine config** (elk `algorithm` / `edgeRouting` dropdowns plus a free-form **config JSON**
-field for arbitrary keys) — and **compare** any two runs side by side. The config is injected
-into each input's `value.meta.engine` and **persisted in the run's manifest**, so every result
-records the config that produced it (shown in the run labels). Each engine reads its own keys:
-**elk** — `algorithm`, `edgeRouting`, raw `elk.*` keys or a `layoutOptions` map; **dagre** —
-`rankdir`, `ranker`, `nodesep`, `edgesep`, `ranksep`, `align`, `marginx/y`, `acyclicer`;
-**cale** and any other engine — whatever it chooses to read from `value.meta.engine`: per-graph metric deltas (green = better, red = worse)
-and two interactive [`GraleView`](viewer/GraleView.svelte) panes. Each pane has independently
-toggleable **overlay categories** — positions, diagram area, box centers, link points (with
-*bend points*, *crossings*, *branch points*), normals, and **link ids** (badge every link with
-its `id`, or its index when it has none — handy for referring to a specific link in a
-screenshot) — plus toggleable engine debug layers (`graph.debug`) and a **⛶ full-screen** button.
-
-Runs persist on disk under `examples/runs/<id>/` (gitignored) and are read fresh on every
-request, so they survive server restarts — compare a run from now against one from before. Point
-the store elsewhere with `GRALE_RUNS`, and delete a run from the picker with 🗑.
-
-**Browse & convert** — the app's 📁 browse picker navigates the graph-test-data repo; pick a
-folder of graphs in any registry format and they're converted to grale on the fly (via the
-graphinout `gio` CLI) before layout. Native `grale-1.0.0` files are used directly; everything
-else is detected by its path family, converted, and size-normalised. See
-[`doc/todo.adoc`](doc/todo.adoc).
-
-### Headless CLI
-
-```bash
-npm run compare -- dagre=dagre cale="my-cli" ../graph-test-data/json/grale/grale-1.0.0
-npm run compare -- cale="my-cli {}" --label now graph1.json   # tag the run dir
-```
-
-Each `name=command` becomes one snapshot dir; the CLI prints a comparison table and the run
-paths. Open them in the app to compare visually.
+Measuring layout quality and comparing engines — **metrics**, timestamped **snapshot runs**, and
+the side-by-side **compare app** — lives in the separate
+**[grale-eval](../grale-eval)** repo, which depends on this package (`file:` link). Go there to
+score layouts (`computeMetrics`), run dagre / elk / cale over the
+[graph-test-data](https://github.com/Calpano/graph-test-data) datasets, and diff two runs
+visually. This package stays focused on the grale API, the renderer, the engine adapters, and the
+`<grale-view>` component that grale-eval renders with.
 
 ## Documentation
 
 | File                                                 | What                                                       |
 |------------------------------------------------------|------------------------------------------------------------|
-| [`doc/spec-grale-api.adoc`](doc/spec-grale-api.adoc) | The normative grale API specification                      |
+| [`doc/graph-layout-api.adoc`](doc/graph-layout-api.adoc) | The normative grale API specification                   |
 | [`doc/engine-contract.adoc`](doc/engine-contract.adoc) | What a layout engine must do to be a grale engine          |
 | [`doc/grale-elk.adoc`](doc/grale-elk.adoc)           | grale ↔ ELK (elk.js) comparison + adapter plan             |
-| [`doc/todo.adoc`](doc/todo.adoc)                     | Deferred work (e.g. browse graph-test-data + graphinout conversion) |
 | [`doc/dagre-js.adoc`](doc/dagre-js.adoc)             | The dagre serialised-JSON baseline grale supersets         |
 | [`doc/dagre-issues.adoc`](doc/dagre-issues.adoc)     | Snapshot of open dagre issues that motivated the additions |
 | [`CHANGELOG.md`](CHANGELOG.md)                        | Release history; current version **1.0.0**                 |

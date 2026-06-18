@@ -13,6 +13,19 @@ library, version numbers describe the specification, not a published package:
 - **MINOR** — new optional fields or capabilities; every prior request stays valid.
 - **PATCH** — clarifications, wording, and editorial fixes with no semantic change.
 
+## [Unreleased]
+
+### Changed
+- **Repo split.** The evaluation framework (layout-quality metrics, the engine
+  runner, snapshot runs, and the side-by-side compare app) moved to the separate
+  `grale-eval` repo, which depends on this package via a `file:` link. This repo
+  now contains the grale API, the SVG renderer, the dagre/elk engine adapters,
+  and the reusable `<grale-view>` web component.
+
+### Added
+- **`grale-dagre` adapter** — dagre as a stdin/stdout CLI engine (mirrors
+  `grale-elk`), reporting pure layout time in `diagnostics.elapsedMicros`.
+
 ## [1.0.0] - 2026-06-16
 
 First stable release of the grale API specification.

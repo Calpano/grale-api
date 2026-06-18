@@ -2,7 +2,7 @@
   "name": "grale",
   "version": "1.0.0",
   "type": "module",
-  "description": "grale — a graph layout engine API, defined as JSON input/output types (a strict superset of the dagre serialised JSON structure), with an SVG renderer, CLI and web-component viewer",
+  "description": "grale — a graph layout engine API, defined as JSON input/output types (a strict superset of the dagre serialised JSON structure), with an SVG renderer, engine adapters (dagre, elk), a CLI and a <grale-view> web component",
   "license": "MIT",
   "author": "Dr. Max Völkel <mv@maxvoelkel.de>",
   "types": "./dist/grale/index.d.ts",
@@ -15,29 +15,26 @@
       "types": "./dist/grale/render/index.d.ts",
       "default": "./dist/grale/render/index.js"
     },
-    "./metrics": {
-      "types": "./dist/grale/metrics/index.d.ts",
-      "default": "./dist/grale/metrics/index.js"
-    }
+    "./viewer/GraleView.svelte": "./viewer/GraleView.svelte",
+    "./viewer/GraleElement.svelte": "./viewer/GraleElement.svelte"
   },
   "bin": {
     "grale-to-svg": "./dist/cli/grale-to-svg.js",
-    "grale-metrics": "./dist/cli/grale-metrics.js",
+    "grale-dagre": "./dist/cli/grale-dagre.js",
     "grale-elk": "./dist/cli/grale-elk.js"
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "viewer"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
     "svg": "tsx src/cli/grale-to-svg.ts",
-    "metrics": "tsx src/cli/grale-metrics.ts",
+    "dagre": "tsx src/cli/grale-dagre.ts",
     "elk": "tsx src/cli/grale-elk.ts",
-    "compare": "npm run build && node scripts/compare.mjs",
-    "dev": "npm run build && vite",
-    "app": "bash scripts/compare-app.sh",
+    "dev": "vite",
     "build:viewer": "vite build",
     "preview": "vite preview"
   },

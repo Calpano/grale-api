@@ -80,17 +80,19 @@ fairly.
 
 == Plugging into the comparison harness
 
-`compare` treats dagre as the built-in baseline and any command as another engine:
+The evaluation framework — which runs an engine over a dataset, scores each
+result with `computeMetrics`, and diffs two runs — lives in the separate
+*grale-eval* repo. It treats dagre as the built-in baseline and any contract-
+following command as another engine:
 
 [source,bash]
 ----
-npm run fixtures                         # (re)generate examples/inputs/*
 npm run compare -- mine="my-engine-cli"  # stdin/stdout engine
 npm run compare -- mine="my-engine {}"   # file-arg engine
 ----
 
-Each engine's results are scored with `computeMetrics` and written under
-`examples/out/<engine>/`. See the link:../README.md[README] for the metric list.
+Run that from grale-eval (which depends on this package). See the grale-eval
+README for the metric list and the interactive compare app.
 
 == See also
 

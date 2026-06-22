@@ -688,7 +688,7 @@ triple). `id` sits on the edge / hyperedge *object*, beside `value`:
 
 [source,json5]
 ----
-{ "v": "a", "w": "b", "id": "e_42", "value": { ... } }
+{ "v": "a", "w": "b", "id": "e_42", "value": { /* ... */ } }
 ----
 
 It is a grale envelope extension; dagre and `graphlib.json` ignore it.
@@ -737,6 +737,7 @@ degenerate single-path case. The result is written to `value.tree`:
 
 [source,json5]
 ----
+{
 "value": {
   "tree": {
     "points": [
@@ -755,6 +756,7 @@ degenerate single-path case. The result is written to `value.tree`:
       { "ends": [1,5], "normals": [4.7124, 1.5708] }   // branch 1's third arm
     ]
   }
+}
 }
 ----
 

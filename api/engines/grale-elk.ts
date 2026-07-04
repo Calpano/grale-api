@@ -9,7 +9,7 @@
  *   cat graph.json | grale-elk            # stdin → stdout
  *   grale-elk graph.json
  *
- * Engine knobs ride in `value.meta.engine` (keeps grale engine-agnostic):
+ * Engine knobs ride in `value.data.grale.engine` (keeps grale engine-agnostic):
  *   { "algorithm": "layered"|"force"|"stress"|"mrtree"|"radial"|…,
  *     "edgeRouting": "orthogonal"|"polyline"|"spline",
  *     "layoutOptions": { "elk.…": "…" } }
@@ -39,7 +39,7 @@ type HyperPlan = { hub: string; arms: Arm[] };
 
 function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, string>; warnings: Warning[]; hypers: HyperPlan[] } {
   const warnings: Warning[] = [];
-  const engine = ((g.value?.meta as Record<string, unknown> | undefined)?.engine ?? {}) as Record<string, unknown>;
+  const engine = ((g.value?.data as { grale?: { engine?: Record<string, unknown> } } | undefined)?.grale?.engine ?? {}) as Record<string, unknown>;
   const layoutOptions: Record<string, string> = {
     'elk.algorithm': String(engine.algorithm ?? 'layered'),
     'elk.direction': directionOf(g.value?.rankdir),

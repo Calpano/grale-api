@@ -123,21 +123,21 @@ offsets to absolutise, convert top-left→centre, and flatten `sections` →
 | graph `value.nodesep/edgesep/ranksep` | `elk.spacing.*` (many)         | ELK splits spacing into ~dozen options
 | graph `value.ranker`            | `elk.layered.nodePlacement.strategy` / `…cycleBreaking` etc. | engine-internal
 | edge label `value.width/height/labelpos` | `ElkLabel` on the edge + `elk.edgeLabels.placement` | ELK labels are first-class shapes
-| node label (grale: `meta.label` only) | `ElkLabel` on the node + `elk.nodeLabels.placement` | grale has no node-label geometry
+| node label (grale: `data.label` only) | `ElkLabel` on the node + `elk.nodeLabels.placement` | grale has no node-label geometry
 | output `diagnostics`            | `logging` / `measureExecutionTime` (unstructured) | no structured warnings in ELK
-| `value.meta` (opaque passthrough) | extra JSON keys (not guaranteed preserved) | adapter should merge grale fields back itself
+| `value.data` (opaque passthrough) | extra JSON keys (not guaranteed preserved) | adapter should merge grale fields back itself
 |===
 
 [[gaps]]
 == What ELK can express that grale cannot
 
 This is the deliverable. Each item notes whether grale should grow a field, or
-whether it is better carried as opaque `meta` for the ELK adapter only.
+whether it is better carried as opaque `data` for the ELK adapter only.
 
 . *Algorithm family.* ELK picks among layered/force/stress/mrtree/radial/
   rectpacking/… grale has no notion of "use a force layout". → **Recommend:** a
   graph-level hint, but namespaced as engine-specific (e.g.
-  `value.meta.engine = { algorithm: 'force' }`) rather than a core grale field —
+  `value.data.grale.engine = { algorithm: 'force' }`) rather than a core grale field —
   grale stays engine-agnostic; the adapter reads it.
 . *Edge routing style.* ELK `elk.edgeRouting` = `ORTHOGONAL` | `POLYLINE` |
   `SPLINES`. grale draws *one* style (routed poly-lines + `cornerRadius`). →
@@ -147,18 +147,18 @@ whether it is better carried as opaque `meta` for the ELK adapter only.
   `layoutOptions` (e.g. a subtree laid out with a different algorithm, a node with
   custom spacing, a port pinned to a side). grale has only a *global* graph
   `value` plus a few fixed per-element fields. → **Recommend:** opaque
-  `meta` passthrough; do not mirror 234 options in grale.
+  `data` passthrough; do not mirror 234 options in grale.
 . *Port constraints / port model.* ELK ports are objects with `elk.port.side`,
   `elk.port.index`, `elk.port.borderOffset`, and `elk.portConstraints`
   (`FREE` | `FIXED_SIDE` | `FIXED_ORDER` | `FIXED_RATIO` | `FIXED_POS`), plus port
   labels and port spacing. grale ports are *slot counts per side* + a
   `{side,index}` reference — no constraint levels, no per-port labels/size. →
-  **Possible core addition:** a port-constraint level on `ports`; otherwise meta.
+  **Possible core addition:** a port-constraint level on `ports`; otherwise data.
 . *First-class labels.* ELK labels (node, edge, *and port*) are shapes with
   `text`, `width`, `height`, position, and placement options. grale models only an
   *edge* label box (`width/height/labelpos/labeloffset`, dagre-inherited) and
-  otherwise pushes label text into `meta`. → grale deliberately leaves label
-  *text* to `meta`; but it lacks node/port label *geometry* a layouter can reserve
+  otherwise pushes label text into `data.label`. → grale deliberately leaves label
+  *text* to `data.label`; but it lacks node/port label *geometry* a layouter can reserve
   space for. Consider node-label `width/height` if we want size-aware node labels.
 . *Directed n-ary edges.* ELK edges are `sources[] → targets[]` (ordered,
   directed). grale `hyperedges` are an *unordered* endpoint set. The directed
@@ -174,11 +174,11 @@ whether it is better carried as opaque `meta` for the ELK adapter only.
   Functionally overlapping, but ELK's model is richer for deep nesting.
 . *Spacing granularity.* ELK exposes node-node, edge-edge, edge-node, port-port,
   component, label spacings independently (dozens). grale has three
-  (`nodesep`/`edgesep`/`ranksep`). → meta if ever needed.
+  (`nodesep`/`edgesep`/`ranksep`). → data if ever needed.
 . *Layout-option richness* (234): model order, crossing-minimisation strategy,
   node-placement (Brandes-Köpf / network-simplex), partitioning, wrapping, aspect
   ratio, content alignment, high-degree-node handling, … None are grale concerns;
-  all are adapter meta.
+  all are adapter data.
 
 == What grale expresses that ELK lacks
 
@@ -197,7 +197,7 @@ So the adapter knows to *echo/ignore* these (ELK can't honour them):
 * `markers` registry, `startMarker`/`endMarker` — rendering concern; ELK has none.
 * `debug` overlay layers, structured `diagnostics.warnings`, per-point `normals`,
   reported `crossings` — ELK outputs `bendPoints`/`junctionPoints` only.
-* opaque `meta` passthrough as a contract — ELK does not guarantee preserving
+* opaque `data` passthrough as a contract — ELK does not guarantee preserving
   unknown keys.
 
 *Conclusion:* the two formats overlap on the dagre-subset core (nodes, sizes,
@@ -215,7 +215,7 @@ adapter that reads grale on stdin and writes grale on stdout:
 . *grale → ELK.* Build an `ElkNode` tree: map `nodes[]` to `children` (nesting by
   `parent` for compound), `edges[]` to `ElkExtendedEdge{sources:[v],targets:[w]}`,
   `value.ports` to `ElkPort`s, edge/node label sizes to `ElkLabel`s. Translate
-  `rankdir`→`elk.direction`. Read engine knobs from `value.meta.engine` (algorithm,
+  `rankdir`→`elk.direction`. Read engine knobs from `value.data.grale.engine` (algorithm,
   edgeRouting, spacing) into `layoutOptions`.
 . *Lay out.* `await elk.layout(elkGraph, { layoutOptions })` with
   `elk.bundled.js` (sync, no worker).
@@ -223,7 +223,7 @@ adapter that reads grale on stdin and writes grale on stdout:
   coordinates; convert node top-left → **centre** (`x+w/2`, `y+h/2`); flatten each
   edge's `sections` (startPoint + bendPoints + endPoint) into `value.points`;
   copy port/label positions back. **Merge onto the original grale graph** so all
-  grale-only fields (`meta`, `markers`, `prefDir`, ids, …) survive — don't rely on
+  grale-only fields (`data`, `markers`, `prefDir`, ids, …) survive — don't rely on
   ELK echoing them.
 . *Diagnostics.* Synthesize grale `diagnostics` (timing from
   `measureExecutionTime`; warnings for anything dropped).
@@ -245,16 +245,16 @@ adapter that reads grale on stdin and writes grale on stdout:
 
 === Recommended grale changes (small)
 
-Only one looks worth promoting to *core* grale; the rest stay engine-`meta`:
+Only one looks worth promoting to *core* grale; the rest stay engine-`data`:
 
 [cols="3,1,3",frame=ends,options="header"]
 |===
 | Capability | Where | Rationale
 
 | `edgeRouting: 'orthogonal'\|'polyline'\|'spline'` (graph label) | core | small, renderer-meaningful, requested by many engines
-| algorithm hint, ELK `layoutOptions`, port constraints, spacing granularity | `value.meta.engine` | engine-specific; keeps grale engine-agnostic
+| algorithm hint, ELK `layoutOptions`, port constraints, spacing granularity | `value.data.grale.engine` | engine-specific; keeps grale engine-agnostic
 | directed hyperedges (sources→targets) | defer | only if a use case needs it; today's hyperedges are unordered by design
-| node/port label geometry | defer | grale leaves label text to `meta`; add sizes only if size-aware node labels are needed
+| node/port label geometry | defer | grale leaves label text to `data.label`; add sizes only if size-aware node labels are needed
 |===
 
 == See also

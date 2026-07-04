@@ -49,7 +49,7 @@ An engine:
   optional features (pins, stability, ports, markers, hyperedges, `cornerRadius`,
   `prefDir`, compound graphs, …) are *accepted and echoed*, ideally with a
   diagnostics warning, never a hard error;
-* MUST treat any label field under `meta` as opaque and pass it through untouched.
+* MUST treat any label field under `data` as opaque and pass it through untouched.
 
 == Output: fill in the geometry
 

@@ -50,7 +50,7 @@ export interface PortRef {
  * A reusable edge-end marker (§markers), declared once in the graph-level
  * registry and referenced by id like an SVG `<defs>` entry. It describes the
  * *rectangular space* the marker occupies; its appearance lives renderer-side
- * (see {@link GraphLabel.meta} and friends).
+ * (see {@link GraphLabel.data} and friends).
  */
 export interface MarkerDef {
   /** Reserved space along the edge (px). */
@@ -107,8 +107,8 @@ export interface GraphLabel {
   logLevel?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
   /** Include debug overlays in the output, default `false` (§"Debug settings"). */
   visualDebug?: boolean;
-  /** Opaque passthrough, ignored by the layouter (§meta). */
-  meta?: Record<string, unknown>;
+  /** Domain-data passthrough, ignored by the layouter (§data); grale-only keys live under `data.grale`. */
+  data?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +138,8 @@ export interface NodeLabel {
   ports?: { top?: number; left?: number; bottom?: number; right?: number };
   /** Draw order (in/out); higher draws on top (§"Waypoint normals, crossings, and z-order"). */
   zIndex?: number;
-  /** Opaque passthrough, ignored by the layouter (§meta). */
-  meta?: Record<string, unknown>;
+  /** Domain-data passthrough, ignored by the layouter (§data); grale-only keys live under `data.grale`. */
+  data?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -188,8 +188,8 @@ export interface EdgeLabel {
   normals?: (number | null)[];
   /** _out_: positions where this edge unavoidably crosses another. */
   crossings?: Point[];
-  /** Opaque passthrough, ignored by the layouter (§meta). */
-  meta?: Record<string, unknown>;
+  /** Domain-data passthrough, ignored by the layouter (§data); grale-only keys live under `data.grale`. */
+  data?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -376,7 +376,8 @@ export interface HyperedgeLabel {
   labelpos?: 'l' | 'c' | 'r';
   labeloffset?: number;
   zIndex?: number;
-  meta?: Record<string, unknown>;
+  /** Domain-data passthrough, ignored by the layouter (§data); grale-only keys live under `data.grale`. */
+  data?: Record<string, unknown>;
 
   // --- output ---
   tree?: HyperedgeTree;

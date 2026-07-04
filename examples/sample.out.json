@@ -12,9 +12,9 @@
     }
   },
   "nodes": [
-    { "v": "a", "value": { "width": 80, "height": 40, "x": 60, "y": 60, "meta": { "label": "Start", "fill": "#dcfce7", "color": "#16a34a" } } },
-    { "v": "b", "value": { "width": 80, "height": 40, "x": 220, "y": 60, "ports": { "bottom": 2 }, "meta": { "label": "Process" } } },
-    { "v": "c", "value": { "width": 80, "height": 40, "x": 220, "y": 160, "meta": { "label": "End", "fill": "#fee2e2", "color": "#dc2626" } } }
+    { "v": "a", "value": { "width": 80, "height": 40, "x": 60, "y": 60, "data": { "label": "Start", "fill": "#dcfce7", "color": "#16a34a" } } },
+    { "v": "b", "value": { "width": 80, "height": 40, "x": 220, "y": 60, "ports": { "bottom": 2 }, "data": { "label": "Process" } } },
+    { "v": "c", "value": { "width": 80, "height": 40, "x": 220, "y": 160, "data": { "label": "End", "fill": "#fee2e2", "color": "#dc2626" } } }
   ],
   "edges": [
     {
@@ -23,7 +23,7 @@
         "points": [ { "x": 100, "y": 60 }, { "x": 168, "y": 60 } ],
         "normals": [ 1.5708, 1.5708 ],
         "endMarker": "arrow",
-        "meta": { "label": "next" }
+        "data": { "label": "next" }
       }
     },
     {
@@ -34,7 +34,7 @@
         "endMarker": "arrow",
         "lineWidth": 2,
         "crossings": [ { "x": 200, "y": 110 } ],
-        "meta": { "label": "done", "color": "#ea580c" }
+        "data": { "label": "done", "color": "#ea580c" }
       }
     }
   ],
@@ -49,7 +49,7 @@
       "value": {
         "lineWidth": 2,
         "x": 132, "y": 112,
-        "meta": { "label": "trip", "color": "#9333ea", "dashed": true },
+        "data": { "label": "trip", "color": "#9333ea", "dashed": true },
         "tree": {
           "points": [
             { "kind": "endpoint", "node": "a", "x": 70, "y": 80 },

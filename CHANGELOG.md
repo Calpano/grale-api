@@ -16,6 +16,7 @@ library, version numbers describe the specification, not a published package:
 ## [Unreleased]
 
 ### Changed
+- Migrated node/edge/graph-centric metadata to 'data' property on the node/edge/graph. Engine-level metadata is now in the 'meta' property. 
 - **Two-part layout.** The repo's two core parts are now top-level directories,
   each with its own README and a delegating root README: `api/` (the JSON layout
   contract types + the `grale-dagre` / `grale-elk` engine adapters + the spec

@@ -4,9 +4,9 @@
  * Pure and DOM-free: the same function backs the CLI (`grale-to-svg`) and the
  * Svelte web component, so both emit byte-identical SVG. It reads only the
  * grale output fields (`x`/`y`, `points`, `tree`, …) plus renderer hints under
- * each label's `meta` (`color`, `fill`, `label`, `dashed`, `rx`, `textColor`)
- * — the layouter never reads `meta`, but a renderer is exactly its audience
- * (grale spec §"Opaque metadata").
+ * each label's `data` (`color`, `fill`, `label`, `dashed`, `rx`, `textColor`)
+ * — the layouter never reads `data`, but a renderer is exactly its audience
+ * (grale spec §"Data").
  *
  * `debug: true` overlays the diagnostics a layout author wants: waypoint dots,
  * per-point normals, crossings, node centres/coords, the layout bounding box,
@@ -61,8 +61,8 @@ const ESC: Record<string, string> = {
 };
 const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ESC[c] as string);
 
-const metaOf = (v: { meta?: Record<string, unknown> } | undefined, k: string): unknown =>
-  v?.meta?.[k];
+const dataOf = (v: { data?: Record<string, unknown> } | undefined, k: string): unknown =>
+  v?.data?.[k];
 const str = (x: unknown, d = ''): string => (typeof x === 'string' ? x : d);
 const numv = (x: unknown, d: number): number => (typeof x === 'number' ? x : d);
 
@@ -288,13 +288,13 @@ function renderNode(n: NodeEntry): string {
   const v = n.value; if (!v || v.x == null || v.y == null) return '';
   const w = numv(v.width, 40), h = numv(v.height, 24);
   const x = v.x - w / 2, y = v.y - h / 2;
-  const fill = str(metaOf(v, 'fill'), '#eef2ff');
-  const stroke = str(metaOf(v, 'color') ?? metaOf(v, 'stroke'), '#3b5bdb');
-  const rx = numv(metaOf(v, 'rx'), 5);
+  const fill = str(dataOf(v, 'fill'), '#eef2ff');
+  const stroke = str(dataOf(v, 'color') ?? dataOf(v, 'stroke'), '#3b5bdb');
+  const rx = numv(dataOf(v, 'rx'), 5);
   let s = `<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" rx="${f(rx)}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />`;
   for (const p of portPoints(v)) s += `<rect x="${f(p.x - 2.5)}" y="${f(p.y - 2.5)}" width="5" height="5" fill="${stroke}" />`;
-  const label = str(metaOf(v, 'label'), n.v);
-  if (label) s += textLabel(v.x, v.y, label, str(metaOf(v, 'textColor'), '#1e293b'), false);
+  const label = str(dataOf(v, 'label'), n.v);
+  if (label) s += textLabel(v.x, v.y, label, str(dataOf(v, 'textColor'), '#1e293b'), false);
   return s;
 }
 
@@ -302,9 +302,9 @@ function renderEdge(e: EdgeEntry, markers: Record<string, MarkerDef>, radius: nu
   const v: EdgeLabel = e.value ?? {};
   const pts = v.points;
   if (v.hidden || !pts || pts.length < 2) return '';
-  const color = str(metaOf(v, 'color'), '#64748b');
+  const color = str(dataOf(v, 'color'), '#64748b');
   const lw = numv(v.lineWidth, 1.5);
-  const dash = metaOf(v, 'dashed') ? ` stroke-dasharray="${f(Math.max(4, lw * 3))} ${f(Math.max(3, lw * 2))}"` : '';
+  const dash = dataOf(v, 'dashed') ? ` stroke-dasharray="${f(Math.max(4, lw * 3))} ${f(Math.max(3, lw * 2))}"` : '';
   const d = polyPath(pts, radius);
   let s = `<path class="link-hit" d="${d}" fill="none" stroke="transparent" stroke-width="12" pointer-events="stroke" />`;
   s += `<path class="link-line" d="${d}" fill="none" stroke="${color}" stroke-width="${f(lw)}" stroke-linejoin="round" stroke-linecap="round"${dash} />`;
@@ -320,10 +320,10 @@ function renderEdge(e: EdgeEntry, markers: Record<string, MarkerDef>, radius: nu
   if (v.startMarker && markers[v.startMarker]) {
     s += markerSvg(pts[0], sub(pts[0], pts[1]), markers[v.startMarker], v.startMarker, color);
   }
-  const label = str(metaOf(v, 'label'));
+  const label = str(dataOf(v, 'label'));
   if (label) {
     const mid = pts[Math.floor(pts.length / 2)];
-    s += textLabel(numv(v.x, mid.x), numv(v.y, mid.y), label, str(metaOf(v, 'textColor'), '#334155'), true);
+    s += textLabel(numv(v.x, mid.x), numv(v.y, mid.y), label, str(dataOf(v, 'textColor'), '#334155'), true);
   }
   return `<g class="grale-link" data-link-id="${esc(id)}">${s}</g>`;
 }
@@ -332,9 +332,9 @@ function renderHyperedge(he: HyperEntry, markers: Record<string, MarkerDef>, id:
   const v = he.value ?? {};
   const tree = v.tree;
   if (v.hidden || !tree) return '';
-  const color = str(metaOf(v, 'color'), '#9333ea');
+  const color = str(dataOf(v, 'color'), '#9333ea');
   const lw = numv(v.lineWidth, 1.5);
-  const dash = metaOf(v, 'dashed') ? ` stroke-dasharray="${f(Math.max(4, lw * 3))} ${f(Math.max(3, lw * 2))}"` : '';
+  const dash = dataOf(v, 'dashed') ? ` stroke-dasharray="${f(Math.max(4, lw * 3))} ${f(Math.max(3, lw * 2))}"` : '';
   let s = '';
   for (const seg of tree.segments) {
     const a = tree.points[seg.ends[0]], b = tree.points[seg.ends[1]];
@@ -352,9 +352,9 @@ function renderHyperedge(he: HyperEntry, markers: Record<string, MarkerDef>, id:
       }
     }
   }
-  const label = str(metaOf(v, 'label'));
+  const label = str(dataOf(v, 'label'));
   if (label && v.x != null && v.y != null)
-    s += textLabel(v.x, v.y, label, str(metaOf(v, 'textColor'), '#6b21a8'), true);
+    s += textLabel(v.x, v.y, label, str(dataOf(v, 'textColor'), '#6b21a8'), true);
   return `<g class="grale-link" data-link-id="${esc(id)}">${s}</g>`;
 }
 

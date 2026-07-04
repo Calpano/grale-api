@@ -64,7 +64,7 @@ Every addition is an optional field on a label; set none and the request reduces
 | **Edges** | `lineWidth`, `cornerRadius`, self-loops, edges across cluster boundaries, optional `id` |
 | **Hyperedges** | n-ary `hyperedges[]` — a set of node endpoints, routed as a point-tree |
 | **Output** | per-point `normals`, edge `crossings`, `zIndex`, and a `diagnostics` object (warnings, timing, displacement) — none of which dagre returns |
-| **Passthrough** | `meta` on any label for renderer data the layouter ignores |
+| **Passthrough** | `data` on any label for domain/renderer data the layouter ignores; grale-only keys under `data.grale` |
 | **Debug** | `logLevel`, `visualDebug` |
 
 See the [full specification](doc/graph-layout-api.adoc) for every field, its type, default, and

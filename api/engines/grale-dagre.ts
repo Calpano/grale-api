@@ -23,8 +23,8 @@ const DAGRE_OPTS = ['rankdir', 'align', 'nodesep', 'edgesep', 'ranksep', 'margin
 export function layout(input: graleGraph): graleGraph {
   const g = dagre.graphlib.json.read(structuredClone(input));
   const gl = (g.graph() ?? {}) as Record<string, unknown>;
-  // honour dagre options passed via the run config (value.meta.engine.*)
-  const ge = (input.value as { meta?: { engine?: Record<string, unknown> } } | undefined)?.meta?.engine;
+  // honour dagre options passed via the run config (value.data.grale.engine.*)
+  const ge = (input.value as { data?: { grale?: { engine?: Record<string, unknown> } } } | undefined)?.data?.grale?.engine;
   if (ge) for (const k of DAGRE_OPTS) if (ge[k] != null) gl[k] = ge[k];
   g.setGraph(gl);
   for (const v of g.nodes()) if (!g.node(v)) g.setNode(v, {});

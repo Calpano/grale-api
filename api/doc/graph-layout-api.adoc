@@ -22,7 +22,7 @@ structure grale adds optional capabilities the original lacks: *pinned nodes*, *
 nodes*, *layout stability across turns* (`prevLayouts`), *per-edge preferred directions*
 and *hidden constraint links*, *per-side node ports*, *reusable edge markers*, *n-ary
 hyperedges*, and honoured edge *weight* and *lineWidth*. Every label may carry opaque
-*`meta`* for the renderer, and it returns *layout diagnostics* (warnings, timing) that
+*`data`* for the renderer, and it returns *layout diagnostics* (warnings, timing) that
 dagre omits.
 
 The dagre JSON baseline this document supersets is specified separately in
@@ -162,7 +162,7 @@ structure with positions filled in.
 | edge `value`   | `lineWidth`            | reserved corridor width / line width (≠ dagre label `width`)
 | edge `value`   | `fromPort` / `toPort`  | attach the edge end to a node port `{side,index}`
 | edge `value`   | `startMarker`/`endMarker` | reference a graph marker by id
-| any `value`    | `meta`                 | opaque passthrough data (renderer-side; never warns)
+| any `value`    | `data`                 | opaque passthrough data (renderer-side; never warns)
 | output edge    | `normals` / `crossings` | per-point path normals; unavoidable crossing positions
 | output         | `diagnostics`          | warnings, timing, displacement (dagre returns none)
 | output         | `debug`                | named, nestable debug overlay layers (line/circle/rect/text)
@@ -257,7 +257,7 @@ The dagre options (`rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `marginx
 | `markers`      | `Record<string, MarkerDef>` | `{}` | marker registry; edges reference entries via `startMarker`/`endMarker` — see <<markers>>
 | `logLevel`     | `'DEBUG'\|'INFO'\|'WARN'\|'ERROR'` | `'WARN'` | log verbosity / diagnostics detail — see <<debug>>
 | `visualDebug`  | boolean            | `false` | include debug overlays in the output — see <<debug>>
-| `meta`         | object             | —    | opaque passthrough, ignored by the layouter — see <<meta>>
+| `data`         | object             | —    | opaque passthrough, ignored by the layouter — see <<data>>
 |===
 
 `width`, `height` on the graph label remain *outputs* (the layout bounding box).
@@ -277,7 +277,7 @@ The dagre node fields (`width`, `height` in; `x`, `y` out) are unchanged — see
 | `pinned` | boolean | hard constraint: treat this node's `x`/`y` as *input* and place its centre there, instead of computing a position. `x`/`y` must be present.
 | `ports`  | `{ top?: number; left?: number; bottom?: number; right?: number }` | number of attachment ports on each side; edges reference them by `{side,index}` — see <<ports>>
 | `zIndex` | number | draw order (in/out); higher draws on top — see <<routing-output>>
-| `meta`   | object | opaque passthrough, ignored by the layouter — see <<meta>>
+| `data`   | object | opaque passthrough, ignored by the layouter — see <<data>>
 |===
 
 [NOTE]
@@ -285,7 +285,7 @@ The dagre node fields (`width`, `height` in; `x`, `y` out) are unchanged — see
 ====
 `width`/`height` are required inputs, but some producers (e.g. converters from formats that
 store only a label) have no real font metrics. They may *estimate* a node box from
-`meta.label`: split the text on `<br>` (see <<label-text>>), word-wrap each part to a maximum
+`data.label`: split the text on `<br>` (see <<label-text>>), word-wrap each part to a maximum
 line length, measure the widest line and the line count in a known font, and add padding. The
 reference implementation assumes **Roboto Regular at 16&nbsp;px**, a 50-character wrap width,
 and a deterministic per-character advance table (so equal input yields equal output). The
@@ -314,7 +314,7 @@ The dagre edge fields (`minlen`, `weight`, `width`, `height`, `labelpos`, `label
 | `zIndex`      | number    | draw order (in/out); higher draws on top — see <<routing-output>>
 | `normals`     | `(number\|null)[]` | _out_: normal angle (rad) per `points` entry — see <<routing-output>>
 | `crossings`   | `Point[]` | _out_: positions where this edge crosses another — see <<routing-output>>
-| `meta`        | object    | opaque passthrough, ignored by the layouter — see <<meta>>
+| `data`        | object    | opaque passthrough, ignored by the layouter — see <<data>>
 |===
 
 === The extensions, in detail
@@ -611,12 +611,12 @@ declared once in a graph-level registry and referenced by id, like SVG `<defs>`:
 
 Because markers consume space they are a *layout* input, not a pure rendering detail: the
 reserved box is why an edge's `points` already stop short of the node by the marker depth.
-The marker's *appearance* (its path, fill, colour) lives renderer-side — see <<meta>>.
+The marker's *appearance* (its path, fill, colour) lives renderer-side — see <<data>>.
 
-[[meta]]
-==== Opaque metadata (`meta`)
+[[data]]
+==== Data
 
-Any label — graph, node, or edge — may carry a `meta` object of arbitrary data. The
+Any label — graph, node, or edge — may carry a `data` object of arbitrary data. The
 layouter never reads it, never lets it affect geometry, and returns it untouched. It is the
 sanctioned home for everything that is the *renderer's* business: colours, label text, node
 `types`, dash patterns, sublabels, tooltips, marker glyph shapes.
@@ -625,28 +625,28 @@ sanctioned home for everything that is the *renderer's* business: colours, label
 ----
 { "v": "a", "w": "b",
   "value": { "endMarker": "arrow",
-             "meta": { "color": "#444", "label": "knows", "dashed": true } } }
+             "data": { "color": "#444", "label": "knows", "dashed": true } } }
 ----
 
-`meta` keeps renderer data clear of <<diagnostics>>: a stray field *outside* `meta` is
-flagged `UNKNOWN_FIELD` (likely a typo), while anything *inside* `meta` passes through
+`data` keeps renderer data clear of <<diagnostics>>: a stray field *outside* `data` is
+flagged `UNKNOWN_FIELD` (likely a typo), while anything *inside* `data` passes through
 silently. It is how grale carries arbitrary per-element data — colours, label text, types,
 dash patterns — without the layouter needing to understand any of it.
 
 [[label-text]]
 ===== Label text and line breaks
 
-The conventional home for display text is `meta.label`, a string. A label may request an
+The conventional home for display text is `data.label`, a string. A label may request an
 explicit line break with a `<br>` tag (`<br>`, `<br/>`, or `<br />`, case-insensitive); the
 text is otherwise a single logical line that the renderer may soft-wrap to fit the node box.
 `<br>` is the *only* markup grale recognises in a label — everything else is literal text.
 
 [source,json5]
 ----
-{ "v": "n", "value": { "meta": { "label": "Order received<br>(pending review)" } } }
+{ "v": "n", "value": { "data": { "label": "Order received<br>(pending review)" } } }
 ----
 
-The layouter does not read `meta.label`: node geometry comes from `width`/`height`
+The layouter does not read `data.label`: node geometry comes from `width`/`height`
 (see <<node-label-additions>>). A producer that has no real font metrics may *estimate*
 `width`/`height` from the label — see the note there.
 
@@ -714,7 +714,7 @@ them; hyperedges live in their own top-level array:
         { "node": "Paris", "marker": "dot" }
       ],
       "value": { "weight": 2, "lineWidth": 2, "prefDir": "right", "zIndex": 1,
-                 "meta": { "type": "booking" } }
+                 "data": { "type": "booking" } }
     }
   ]
 }
@@ -725,7 +725,7 @@ them; hyperedges live in their own top-level array:
   port, exactly like a binary edge's `fromPort` / `toPort`. A bad marker / port id yields a
   `BAD_MARKER` / `BAD_PORT` warning; a missing node yields `DANGLING_EDGE`.
 * `value` carries the *same* whole-edge properties as a binary edge — `weight`, `hidden`,
-  `lineWidth`, `prefDir`, `labelpos`, `zIndex`, `meta`, … The per-*end* binary fields
+  `lineWidth`, `prefDir`, `labelpos`, `zIndex`, `data`, … The per-*end* binary fields
   (`startMarker`/`endMarker`, `fromPort`/`toPort`, `points`/`normals`/`crossings`) do not
   apply; their job is done by the per-endpoint `marker`/`port` and by the output `tree`.
 * `id` is optional and also allowed on binary edges (see <<edge-id>>).
@@ -897,7 +897,7 @@ every result so callers can see what happened:
 Unknown fields are *ignored* (dagre-compatible — labels are open objects), but each one is
 surfaced as an `UNKNOWN_FIELD` warning. A mistyped option — a recurring dagre complaint
 where settings silently do nothing (issues #461, #310, #161) — becomes visible instead of
-vanishing. Intentional passthrough data belongs under `meta` (see <<meta>>), which is never
+vanishing. Intentional passthrough data belongs under `data` (see <<data>>), which is never
 reported.
 
 `elapsedMicros`:: Layout wall-time in microseconds. Excluded from the determinism
@@ -988,7 +988,7 @@ export interface GraphLabel {
   markers?: Record<string, MarkerDef>;         // marker registry (SVG-defs style)
   logLevel?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';  // log verbosity, default 'WARN'
   visualDebug?: boolean;                       // include debug overlays in output
-  meta?: Record<string, unknown>;              // opaque passthrough
+  data?: Record<string, unknown>;              // opaque passthrough
 }
 
 // --- node label (JsonNode.value) ---
@@ -1002,7 +1002,7 @@ export interface NodeLabel {
   pinned?: boolean;   // treat x/y as input (hard pin) rather than output
   ports?: { top?: number; left?: number; bottom?: number; right?: number };  // ports per side
   zIndex?: number;                  // draw order (in/out)
-  meta?: Record<string, unknown>;   // opaque passthrough
+  data?: Record<string, unknown>;   // opaque passthrough
 }
 
 // --- edge label (JsonEdge.value) ---
@@ -1028,7 +1028,7 @@ export interface EdgeLabel {
   zIndex?: number;       // draw order (in/out)
   normals?: (number | null)[];   // out: normal angle (rad) per points[] entry
   crossings?: Point[];           // out: where this edge crosses another
-  meta?: Record<string, unknown>;   // opaque passthrough
+  data?: Record<string, unknown>;   // opaque passthrough
 }
 
 // --- diagnostics (output only) ---
@@ -1098,7 +1098,7 @@ export interface HyperedgeLabel {
   // shared with EdgeLabel (whole-hyperedge)
   minlen?: number; weight?: number; hidden?: boolean; lineWidth?: number;
   prefDir?: Direction; labelpos?: 'l' | 'c' | 'r'; labeloffset?: number;
-  zIndex?: number; meta?: Record<string, unknown>;
+  zIndex?: number; data?: Record<string, unknown>;
   // output
   tree?: HyperedgeTree;
   x?: number; y?: number;                   // label centre (out)
@@ -1155,7 +1155,7 @@ export function layout(graph: graleGraph): graleGraph;
 | reusable edge markers (registry)   | ➕ added | dagre has none
 | n-ary hyperedges                   | ➕ added | dagre is binary-only (cf. GraphML `<hyperedge>`)
 | edge / hyperedge `id`              | ➕ added | dagre identity is `(v,w,name)`
-| opaque `meta` passthrough          | ➕ added | renderer data; never affects layout
+| opaque `data` passthrough          | ➕ added | renderer data; never affects layout
 | waypoint normals (output)          | ➕ added | dagre gives `points` only, no tangent
 | edge crossings (output)            | ➕ added | minimised, with the residue reported
 | z-order (`zIndex`)                 | ➕ added | dagre has none
@@ -1182,11 +1182,11 @@ format:grale-1.0.0 ..does not use.. edges-on-edges
 format:grale-1.0.0 ..uses.. nested-graphs-in-nodes ,, compound graphs via node parent (options.compound)
 format:grale-1.0.0 ..does not use.. nested-graphs-in-edges
 format:grale-1.0.0 ..does not use.. nested-graphs-in-graphs
-format:grale-1.0.0 ..uses.. node-labels ,, node value/meta label
-format:grale-1.0.0 ..uses.. edge-labels ,, edge value/meta label
-format:grale-1.0.0 ..uses.. attributes-on-nodes ,, node value plus opaque meta
-format:grale-1.0.0 ..uses.. attributes-on-edges ,, edge value (weight, lineWidth, minlen) plus opaque meta
-format:grale-1.0.0 ..uses.. attributes-on-graphs ,, graph value label plus opaque meta
+format:grale-1.0.0 ..uses.. node-labels ,, node value/data label
+format:grale-1.0.0 ..uses.. edge-labels ,, edge value/data label
+format:grale-1.0.0 ..uses.. attributes-on-nodes ,, node value plus opaque data
+format:grale-1.0.0 ..uses.. attributes-on-edges ,, edge value (weight, lineWidth, minlen) plus opaque data
+format:grale-1.0.0 ..uses.. attributes-on-graphs ,, graph value label plus opaque data
 format:grale-1.0.0 ..does not use.. typed-edges ,, markers are visual, not a semantic edge type
 ----
 

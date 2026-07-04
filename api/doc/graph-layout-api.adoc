@@ -44,6 +44,24 @@ coordinates differ from dagre's. The guarantee is:
   reduces to the dagre structure (see <<reduction-to-dagre>>).
 ====
 
+[[terminology]]
+== Terminology
+
+Terms used consistently throughout this spec and the repo:
+
+[cols="1,4",frame=ends]
+|===
+| Term | Meaning
+
+| *engine* (synonym: *layouter*) | anything implementing `layout(graph)` per `xref:engine-contract.adoc[]`. grale itself is only the data format, not an engine.
+| *adapter* | an engine that wraps an existing layouter in the grale contract (this repo ships `grale-dagre` and `grale-elk`).
+| *request* / *result* | the input / output `graleGraph` document. Every result is itself a valid request (see <<layout-graph>>).
+| *envelope* | the top-level JSON object: `options`, `nodes[]`, `edges[]`, `value`, plus grale's `hyperedges[]` and the output-only `diagnostics` / `debug`.
+| *label* | the `value` object of the graph, a node, an edge, or a hyperedge — where every attribute (dagre's and grale's) lives.
+| *link* | an edge *or* a hyperedge — used where a statement applies to both (crossings, z-order, the viewer's link interaction).
+| *anchor* | a node's position in the latest `prevLayouts` frame that contains it (see <<respecting-previous-layouts>>).
+|===
+
 == Part I — Compact reference
 
 For developers who already know dagre. Skip to <<part-ii-detailed-reference>>
@@ -55,7 +73,7 @@ grale is a function from a graph JSON to a graph JSON:
 
 [source,ts]
 ----
-import { layout } from 'grale';
+import { layout } from 'grale-api/engines/dagre';   // or any grale engine
 
 const out = layout(graphJson);   // graleGraph -> graleGraph (positions filled in)
 ----
@@ -72,7 +90,7 @@ Any dagre/graphlib graph becomes a grale request by serialising it:
 [source,ts]
 ----
 import * as graphlib from '@dagrejs/graphlib';
-import { layout } from 'grale';
+import { layout } from 'grale-api/engines/dagre';   // or any grale engine
 
 const out = layout(graphlib.json.write(g));   // serialise dagre graph -> grale
 const g2  = graphlib.json.read(out);          // back to a graph, positions in the labels
@@ -767,8 +785,9 @@ degenerate single-path case. The result is written to `value.tree`:
 `crossing`::: degree-2 point where this hyperedge crosses another link (the hyperedge
 analogue of an edge's `crossings`).
 `segments`:: the tree edges, each `{ ends: [i, j], normals: [ni, nj] }` — the two point
-indices it joins, plus the tangent normal (rad) at each end (`ni` as the segment leaves `i`
-toward `j`, `nj` as it leaves `j` toward `i`). A tree over N points has N − 1 segments; the
+indices it joins, plus the outward-normal angle (rad) at each end (`ni` as the segment leaves
+`i` toward `j`, `nj` as it leaves `j` toward `i`) — the same normal a binary edge's `normals`
+carries per point (see <<routing-output>>). A tree over N points has N − 1 segments; the
 topology may branch arbitrarily.
 
 Normals live on *segment ends*, not on points, so every point kind is handled the same way —
@@ -1086,7 +1105,7 @@ export interface HyperedgePoint {
 
 export interface HyperedgeSegment {
   ends: [number, number];      // point indices [i, j]
-  normals: [number, number];   // tangent normal (rad) leaving i->j and j->i
+  normals: [number, number];   // outward-normal angle (rad) leaving i->j and j->i
 }
 
 export interface HyperedgeTree {            // out

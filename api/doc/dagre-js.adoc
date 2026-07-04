@@ -19,10 +19,10 @@ https://github.com/dagrejs/dagre[dagre] graph — the format produced by graphli
 dagre's layout attributes in the node, edge, and graph labels.
 
 It is deliberately *not* a reference of the graphlib JavaScript builder API
-(`setNode`, `setEdge`, `predecessors`, …). `xref:spec-kvizle-api.adoc[Kvizle]` is a data
+(`setNode`, `setEdge`, `predecessors`, …). `xref:graph-layout-api.adoc[grale]` is a data
 format, not a class library, so the structure it must be a strict superset of is this
 JSON document — not a set of methods. Every key, label field, allowed value, and default
-listed here exists in the Kvizle JSON with the same meaning; Kvizle adds optional fields
+listed here exists in the grale JSON with the same meaning; grale adds optional fields
 on top and removes nothing.
 
 This document tracks upstream — it is descriptive, not normative. When upstream and this
@@ -42,9 +42,9 @@ const g2   = graphlib.json.read(json); // JsonGraph -> Graph
 ----
 
 `write()` walks the graph and emits the envelope below; `read()` reconstructs an
-equivalent graph from it. The JSON round-trips losslessly. Kvizle takes this JSON as its
+equivalent graph from it. The JSON round-trips losslessly. grale takes this JSON as its
 interface so that callers can build a graph with any dagre/graphlib tooling, serialise it,
-and hand the bytes to Kvizle — no shared object graph, no method calls across the boundary.
+and hand the bytes to grale — no shared object graph, no method calls across the boundary.
 
 [NOTE]
 The verbatim source of the structure is `lib/json.ts` in `dagrejs/graphlib`
@@ -190,4 +190,4 @@ After layout, the same structure comes back with positions filled into the label
 .See also
 * https://github.com/dagrejs/graphlib/blob/master/lib/json.ts[`graphlib/lib/json.ts`] — the serialisation source
 * https://github.com/dagrejs/dagre/wiki[dagre wiki] — the meaning of the layout attributes
-* `xref:spec-kvizle-api.adoc[]` — the Kvizle superset of this structure
+* `xref:graph-layout-api.adoc[]` — the grale superset of this structure

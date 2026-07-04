@@ -344,8 +344,10 @@ export interface HyperedgePoint {
 
 /**
  * One tree edge of a hyperedge route: the two point indices it joins, plus the
- * tangent normal (rad) at each end (`ni` leaving `i` toward `j`, `nj` leaving
- * `j` toward `i`). Normals live on segment ends, not on points.
+ * outward-normal angle (rad) at each end (`ni` leaving `i` toward `j`, `nj`
+ * leaving `j` toward `i`) — the same normal an edge's
+ * {@link EdgeLabel.normals} carries per point. Normals live on segment ends,
+ * not on points.
  */
 export interface HyperedgeSegment {
   ends: [number, number];

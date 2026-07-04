@@ -4,10 +4,14 @@
 :idprefix:
 :idseparator: -
 
-What any layout engine must do to be a *grale engine* — and to plug into this
-repo's comparison harness. The authoritative data format is
-link:graph-layout-api.adoc[the grale API spec]; this page is the short version
-of the *behavioural* contract.
+What any layout engine must do to be a *grale engine* — and to plug into the
+comparison harness in the separate *grale-eval* repo. The authoritative data
+format is link:graph-layout-api.adoc[the grale API spec]; this page is the
+short version of the *behavioural* contract.
+
+An *engine* is anything that implements this contract; an *adapter* is an
+engine that wraps an existing layouter (this repo ships two:
+`engines/grale-dagre.ts` and `engines/grale-elk.ts`).
 
 == The function
 

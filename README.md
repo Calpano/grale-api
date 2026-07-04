@@ -28,7 +28,7 @@ This repository has **two core parts**, each in its own directory with its own R
 | Part                          | Directory                                         | What it is                                                                                                                                                                                                                    |
 |-------------------------------|---------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Layout API**                | [`api/`](api/) — [README](api/README.md)          | The JSON layout contract (the `graleGraph` types), the engine **adapters** that fulfil it (`grale-dagre`, `grale-elk`, or any stdin→stdout command), and the normative spec. *What a layout is, and how engines produce one.* |
-| **Engine-independent runner** | [`viewer/`](viewer/) — [README](viewer/README.md) | The DOM-free SVG **renderer** and the `<grale-view>` web component that draw a grale result from **any** engine, plus the `grale-to-svg` CLI. *How a layout — whoever produced it — gets viewed.*                             |
+| **Viewer** (engine-independent) | [`viewer/`](viewer/) — [README](viewer/README.md) | The DOM-free SVG **renderer** and the `<grale-view>` web component that draw a grale result from **any** engine, plus the `grale-to-svg` CLI. *How a layout — whoever produced it — gets viewed.*                             |
 
 ```
    api/  ── grale JSON contract + engine adapters ──▶  a grale result graph
@@ -37,8 +37,8 @@ This repository has **two core parts**, each in its own directory with its own R
 ```
 
 ```ts
-import type { graleGraph } from 'grale';        // the layout contract (api/)
-import { renderSvg } from 'grale/render';        // draw any result to SVG (viewer/)
+import type { graleGraph } from 'grale-api';    // the layout contract (api/)
+import { renderSvg } from 'grale-api/render';    // draw any result to SVG (viewer/)
 ```
 
 > **Status: specification — version 1.0.0.** The full normative spec lives in

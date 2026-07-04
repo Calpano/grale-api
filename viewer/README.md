@@ -1,9 +1,13 @@
-# grale viewer — the engine-independent runner
+# grale viewer — engine-independent rendering
 
 This directory draws a grale **result** graph — positions filled in by *any* engine — to SVG. It
 is engine-independent: it reads only the grale output ([`api/`](../api)), never how the layout was
 produced. Two front-ends share one renderer, so the command line and the browser produce identical
 output.
+
+Viewer terminology: a **link** is any drawn connection — a binary edge *or* a hyperedge. The API
+distinguishes `edges[]` and `hyperedges[]`; the viewer treats both uniformly (one `data-link-id`
+per link, the same hover/select/badge behaviour).
 
 - [`render/svg.ts`](render/svg.ts) — the pure, DOM-free renderer (`renderSvg`)
 - [`grale-to-svg.ts`](grale-to-svg.ts) — the CLI that writes an `.svg` file
@@ -13,7 +17,7 @@ output.
 ## Renderer
 
 ```ts
-import { renderSvg } from 'grale/render';
+import { renderSvg } from 'grale-api/render';
 
 const svg = renderSvg(resultGraph, { debug: true });   // -> SVG string
 ```
@@ -52,7 +56,7 @@ npm run build:viewer # bundle the viewer (and the <grale-view> element)
 To embed `GraleView` inside another Svelte app, import it from the package:
 
 ```ts
-import GraleView from 'grale/viewer/GraleView.svelte';
+import GraleView from 'grale-api/viewer/GraleView.svelte';
 ```
 
 (this is exactly how the [grale-eval](../../grale-eval) compare app renders its panes.)

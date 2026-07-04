@@ -5,7 +5,7 @@ Dr. Max Völkel <mv@maxvoelkel.de>
 :toclevels: 2
 
 [abstract]
-Snapshot of all 170 open issues in https://github.com/dagrejs/dagre[dagrejs/dagre], pulled for design inspiration for `xref:spec-kvizle-api.adoc[Kvizle]`. Sorted by comment count (engagement proxy). Bodies are verbatim; long ones truncated.
+Snapshot of all 170 open issues in https://github.com/dagrejs/dagre[dagrejs/dagre], pulled for design inspiration for `xref:graph-layout-api.adoc[grale]`. Sorted by comment count (engagement proxy). Bodies are verbatim; long ones truncated.
 
 == Label distribution
 

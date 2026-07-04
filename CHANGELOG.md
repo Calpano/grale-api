@@ -16,7 +16,12 @@ library, version numbers describe the specification, not a published package:
 ## [Unreleased]
 
 ### Changed
-- Migrated node/edge/graph-centric metadata to 'data' property on the node/edge/graph. Engine-level metadata is now in the 'meta' property. 
+- **`meta` → `data`.** The opaque passthrough field on every label (graph, node,
+  edge, hyperedge) is renamed from `meta` to `data`. grale-reserved keys live
+  under `data.grale`; engine-specific settings under `data.grale.engine` (e.g.
+  the elk adapter's `algorithm` / `edgeRouting` / `layoutOptions`). Note: by the
+  versioning rules above this is a **MAJOR** change (a request using `meta` is
+  no longer understood — it now triggers `UNKNOWN_FIELD`).
 - **Two-part layout.** The repo's two core parts are now top-level directories,
   each with its own README and a delegating root README: `api/` (the JSON layout
   contract types + the `grale-dagre` / `grale-elk` engine adapters + the spec

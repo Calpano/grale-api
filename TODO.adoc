@@ -1,0 +1,82 @@
+= grale — TODO
+:toc:
+:idprefix:
+:idseparator: -
+
+Improvements identified in a documentation/consistency pass (2026-07-04). Items
+that would change the public API or engine behaviour are *recorded here, not
+applied*; pure wording/consistency fixes were applied directly.
+
+== Spec & versioning
+
+* *`meta` → `data` is a MAJOR change.* By the CHANGELOG's own semver rules
+  ("changes the meaning of an existing field" / invalidates prior requests),
+  the Unreleased rename means the next release should be *2.0.0*, not 1.x.
+* *Package name.* `package.json` says `grale-api`, but prose examples used to
+  import from `'grale'` (now fixed to `'grale-api'`). If `grale` is the
+  intended npm name, rename the package once and sweep the docs again.
+* *Single source of truth for the TS listing.* The
+  `graph-layout-api.adoc` §"TypeScript types" block duplicates `api/types.ts`
+  by hand and has already drifted (`Warning.code`: `\| string` vs
+  `(string & {})`; `export function layout` vs the exported `Layout` type).
+  Generate the listing from `types.ts`, or CI-diff the two.
+* *`Layout` is sync-only.* The elk adapter's `layout` returns a `Promise` and
+  does not satisfy `Layout`. Widen to
+  `(g: graleGraph) => graleGraph \| Promise<graleGraph>` or add an
+  `AsyncLayout` alias (MINOR).
+* *`edgeRouting`.* `grale-elk.adoc` recommends promoting
+  `edgeRouting: 'orthogonal'\|'polyline'\|'spline'` to the graph label, and
+  `grale-elk.ts` already reads a raw `value.edgeRouting` key that the spec does
+  not define — an undocumented field silently changes layout, exactly what
+  `UNKNOWN_FIELD` exists to prevent. Either promote it to the spec or restrict
+  the adapter to `data.grale.engine.edgeRouting`.
+
+== Engine adapters — behavioural gaps vs the spec
+
+=== grale-dagre
+
+* *Hidden edges keep their `points`.* dagre routes `hidden: true` edges and
+  the adapter emits the result; the spec says a hidden edge gets no `points`.
+  Strip them after layout.
+* *No diagnostics beyond `elapsedMicros`.* Unsupported grale fields (`pinned`,
+  `ports`, `markers`, `stability`, `hyperedges`, …) are silently ignored; the
+  engine contract asks for warnings. `UNKNOWN_FIELD` and `DANGLING_EDGE` are
+  also never emitted.
+
+=== grale-elk
+
+* *Timing granularity.* `elapsedMicros` is `(Date.now() delta) * 1000` —
+  millisecond resolution dressed as microseconds. Use
+  `process.hrtime.bigint()` like grale-dagre.
+* *Same missing-warnings gap* as grale-dagre (`ports`, `markers`, `pinned`,
+  `stability`, `prefDir` accepted silently).
+* *`minlen` / `weight` unmapped.* Neither is translated to an ELK option;
+  `grale-elk.adoc` lists candidate mappings.
+
+=== Both
+
+* *Shared CLI boilerplate.* stdin/file-arg reading and the
+  direct-execution guard are duplicated; extract a small
+  `runEngineCli(layout)` helper.
+
+== Renderer & viewer
+
+* *`<br>` in labels is not honoured.* The spec (§"Label text and line breaks")
+  defines `<br>` as the one recognised label markup, but `renderSvg` draws
+  `data.label` as a single line. Split on `<br>` and emit `<tspan>`s.
+* *`<grale-view>` exposes fewer props than `GraleView`.* The custom element
+  forwards only `graph` / `debug` / `padding`; `layersVisible` and the granular
+  overlay flags (`normals`, `linkIds`, …) are unreachable from HTML.
+* *Overlay naming.* The debug panel says "box centers" where the spec says
+  node *centre*; consider "node centres" for term consistency.
+* *Two independent text-metric guesses.* `textLabel`'s 6.2 px/char halo width
+  and the spec's node-size estimation note (Roboto 16 px advance table) should
+  share one deterministic metric.
+
+== Docs
+
+* *`dagre-issues.adoc` is a hand-pulled snapshot* ("170 open issues",
+  2026-06-15). Add a script to regenerate it instead of hand-refreshing.
+* *`cale` is referenced but never introduced* (`grale-elk.adoc` abstract,
+  `api/README.md`, `grale-dagre.ts` header — "JVM-based cale"). Add one line
+  saying what cale is, or link to its repo.

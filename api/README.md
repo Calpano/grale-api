@@ -5,7 +5,7 @@ the reference engine **adapters** that fulfil it. The renderer and web component
 result live in the sibling [`viewer/`](../viewer) directory.
 
 ```ts
-import type { graleGraph, NodeLabel, EdgeLabel, Hyperedge, Diagnostics } from 'grale';
+import type { graleGraph, NodeLabel, EdgeLabel, Hyperedge, Diagnostics } from 'grale-api';
 ```
 
 ## Why
@@ -77,7 +77,7 @@ envelope ([`types.ts`](types.ts)) and the graph / node / edge / hyperedge labels
 from the package root ([`index.ts`](index.ts)):
 
 ```ts
-import type { graleGraph, GraphLabel, NodeLabel, EdgeLabel, Hyperedge, Diagnostics } from 'grale';
+import type { graleGraph, GraphLabel, NodeLabel, EdgeLabel, Hyperedge, Diagnostics } from 'grale-api';
 ```
 
 ## Engine adapters

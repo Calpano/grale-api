@@ -140,13 +140,22 @@ function markerSvg(tip: V, dir: V, def: MarkerDef, id: string, color: string): s
   return `<path d="M ${f(tip.x)} ${f(tip.y)} L ${f(a.x)} ${f(a.y)} L ${f(b.x)} ${f(b.y)} Z" fill="${color}" />`;
 }
 
+/** A centred text label. `<br>` (the one markup grale recognises in
+ * `data.label` — spec §"Label text and line breaks") starts a new line;
+ * multi-line labels are centred vertically around `y`. */
 function textLabel(x: number, y: number, text: string, color: string, halo: boolean): string {
-  const t = esc(text);
-  const w = text.length * 6.2 + 8;
+  const lines = text.split(/<br\s*\/?>/i);
+  const lineH = 13;
+  const w = Math.max(...lines.map((l) => l.length)) * 6.2 + 8;
+  const h = lines.length === 1 ? 18 : lines.length * lineH + 5;
   const bg = halo
-    ? `<rect x="${f(x - w / 2)}" y="${f(y - 9)}" width="${f(w)}" height="18" rx="3" fill="#ffffffd9" />`
+    ? `<rect x="${f(x - w / 2)}" y="${f(y - h / 2)}" width="${f(w)}" height="${f(h)}" rx="3" fill="#ffffffd9" />`
     : '';
-  return `${bg}<text x="${f(x)}" y="${f(y)}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="${color}">${t}</text>`;
+  const y0 = y - ((lines.length - 1) * lineH) / 2;
+  const spans = lines
+    .map((l, i) => `<text x="${f(x)}" y="${f(y0 + i * lineH)}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="${color}">${esc(l)}</text>`)
+    .join('');
+  return bg + spans;
 }
 
 /** A tiny pill labelling a link with its id/index, centred at (x, y). */

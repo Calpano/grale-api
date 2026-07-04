@@ -10,7 +10,8 @@ Dr. Max Völkel <mv@maxvoelkel.de>
 [abstract]
 We want to add https://github.com/kieler/elkjs[elk.js] (the JS build of the
 Eclipse Layout Kernel, ELK) as an alternative engine in the comparison framework,
-alongside dagre and cale. This document analyses the ELK API and data model,
+alongside dagre and cale (the Calpano Layout Engine, the sibling `../cale` repo's
+native grale engine). This document analyses the ELK API and data model,
 maps it against the `xref:graph-layout-api.adoc[grale]` format, and — the point
 of the exercise — lists *what ELK can express that grale currently cannot*, so we
 know what (if anything) grale should grow before treating ELK output as a
@@ -140,9 +141,9 @@ whether it is better carried as opaque `data` for the ELK adapter only.
   `value.data.grale.engine = { algorithm: 'force' }`) rather than a core grale field —
   grale stays engine-agnostic; the adapter reads it.
 . *Edge routing style.* ELK `elk.edgeRouting` = `ORTHOGONAL` | `POLYLINE` |
-  `SPLINES`. grale draws *one* style (routed poly-lines + `cornerRadius`). →
-  **Candidate core addition:** `edgeRouting?: 'orthogonal'|'polyline'|'spline'`
-  on the graph label; it is renderer/engine-meaningful and small.
+  `SPLINES`. → **Done (grale 2.0.0):** `edgeRouting?: 'orthogonal'|'polyline'|'spline'`
+  on the graph label; the adapter maps it to `elk.edgeRouting`
+  (`data.grale.engine.edgeRouting` overrides).
 . *Per-element layout options.* Any ELK node/edge/port carries its own
   `layoutOptions` (e.g. a subtree laid out with a different algorithm, a node with
   custom spacing, a port pinned to a side). grale has only a *global* graph
@@ -251,7 +252,7 @@ Only one looks worth promoting to *core* grale; the rest stay engine-`data`:
 |===
 | Capability | Where | Rationale
 
-| `edgeRouting: 'orthogonal'\|'polyline'\|'spline'` (graph label) | core | small, renderer-meaningful, requested by many engines
+| `edgeRouting: 'orthogonal'\|'polyline'\|'spline'` (graph label) | core — **added in 2.0.0** | small, renderer-meaningful, requested by many engines
 | algorithm hint, ELK `layoutOptions`, port constraints, spacing granularity | `value.data.grale.engine` | engine-specific; keeps grale engine-agnostic
 | directed hyperedges (sources→targets) | defer | only if a use case needs it; today's hyperedges are unordered by design
 | node/port label geometry | defer | grale leaves label text to `data.label`; add sizes only if size-aware node labels are needed

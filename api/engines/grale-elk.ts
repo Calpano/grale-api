@@ -11,8 +11,12 @@
  *
  * Engine knobs ride in `value.data.grale.engine` (keeps grale engine-agnostic):
  *   { "algorithm": "layered"|"force"|"stress"|"mrtree"|"radial"|…,
- *     "edgeRouting": "orthogonal"|"polyline"|"spline",
+ *     "edgeRouting": "orthogonal"|"polyline"|"spline",   // overrides value.edgeRouting
  *     "layoutOptions": { "elk.…": "…" } }
+ *
+ * grale features ELK has no mapping for (pins, ports, markers, stability, …)
+ * are accepted and echoed, each with an `UNSUPPORTED` warning — see
+ * `engine-common.ts`.
  *
  * Hyperedges: ELK's algorithms only route *simple* edges ("Passed edge is not
  * 'simple'"), so each grale hyperedge is decomposed into a small dummy hub node
@@ -20,10 +24,9 @@
  * are recombined into the grale hyperedge `tree` (hub → branch point, each arm →
  * endpoint, with bends in between).
  */
-import { readFileSync, realpathSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import type { graleGraph, HyperedgePoint, HyperedgeSegment } from '../types.js';
+import type { graleGraph, HyperedgePoint, HyperedgeSegment, Warning } from '../types.js';
+import { inspectRequest, isMain, runEngineCli } from './engine-common.js';
 
 type Pt = { x: number; y: number };
 interface ElkN { id: string; width?: number; height?: number; x?: number; y?: number; children?: ElkN[]; edges?: ElkE[]; layoutOptions?: Record<string, string>; }
@@ -33,18 +36,21 @@ interface ElkE { id: string; sources: string[]; targets: string[]; sections?: El
 const directionOf = (r?: string): string => (r === 'BT' ? 'UP' : r === 'LR' ? 'RIGHT' : r === 'RL' ? 'LEFT' : 'DOWN');
 const normalAngle = (a: Pt, b: Pt): number => Math.atan2(b.x - a.x, -(b.y - a.y)); // perpendicular to a→b
 
-type Warning = { code: string; message: string };
 type Arm = { edgeId: string; node: string; marker?: string };
 type HyperPlan = { hub: string; arms: Arm[] };
 
-function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, string>; warnings: Warning[]; hypers: HyperPlan[] } {
-  const warnings: Warning[] = [];
+/** grale features elk.js ignores — echoed, warned about, never honoured.
+ * (`minlen`/`weight` have no ELK mapping yet — see doc/grale-elk.adoc.) */
+const IGNORED = ['pinned', 'ports', 'fromPort', 'toPort', 'markers', 'startMarker', 'endMarker', 'stability', 'prevLayouts', 'focus', 'prefDir', 'lineWidth', 'visualDebug', 'minlen', 'weight', 'align', 'edgesep', 'marginx', 'marginy', 'acyclicer', 'ranker'] as const;
+
+function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, string>; hypers: HyperPlan[] } {
   const engine = ((g.value?.data as { grale?: { engine?: Record<string, unknown> } } | undefined)?.grale?.engine ?? {}) as Record<string, unknown>;
   const layoutOptions: Record<string, string> = {
     'elk.algorithm': String(engine.algorithm ?? 'layered'),
     'elk.direction': directionOf(g.value?.rankdir),
   };
-  const routing = engine.edgeRouting ?? (g.value as Record<string, unknown> | undefined)?.edgeRouting;
+  // graph-level edgeRouting (spec §"Edge routing"); data.grale.engine overrides
+  const routing = engine.edgeRouting ?? g.value?.edgeRouting;
   if (routing) layoutOptions['elk.edgeRouting'] = String(routing).toUpperCase();
   if (typeof g.value?.nodesep === 'number') layoutOptions['elk.spacing.nodeNode'] = String(g.value.nodesep);
   if (typeof g.value?.ranksep === 'number') layoutOptions['elk.layered.spacing.nodeNodeBetweenLayers'] = String(g.value.ranksep);
@@ -65,7 +71,7 @@ function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, st
 
   const edges: ElkE[] = [];
   (g.edges ?? []).forEach((e, i) => {
-    if (!byId.has(e.v) || !byId.has(e.w)) { warnings.push({ code: 'DANGLING_EDGE', message: `edge ${e.v}->${e.w} references a missing node` }); return; }
+    if (!byId.has(e.v) || !byId.has(e.w)) return; // dangling: warned by inspectRequest, echoed without points
     edges.push({ id: e.id ?? `__e${i}`, sources: [e.v], targets: [e.w] });
   });
 
@@ -75,7 +81,7 @@ function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, st
     const hub = `__hub${hi}`;
     const arms: Arm[] = [];
     (he.endpoints ?? []).forEach((ep, k) => {
-      if (!byId.has(ep.node)) { warnings.push({ code: 'DANGLING_EDGE', message: `hyperedge endpoint '${ep.node}' is missing` }); return; }
+      if (!byId.has(ep.node)) return; // dangling endpoint: warned by inspectRequest
       const edgeId = `__h${hi}_${k}`;
       edges.push({ id: edgeId, sources: [hub], targets: [ep.node] });
       arms.push({ edgeId, node: ep.node, marker: ep.marker });
@@ -83,7 +89,7 @@ function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, st
     if (arms.length) { roots.push({ id: hub, width: 6, height: 6 }); hypers.push({ hub, arms }); }
   });
 
-  return { root: { id: 'root', layoutOptions, children: roots, edges }, layoutOptions, warnings, hypers };
+  return { root: { id: 'root', layoutOptions, children: roots, edges }, layoutOptions, hypers };
 }
 
 function applyElk(g: graleGraph, res: ElkN, plan: { warnings: Warning[]; hypers: HyperPlan[] }, micros: number): graleGraph {
@@ -153,22 +159,14 @@ function applyElk(g: graleGraph, res: ElkN, plan: { warnings: Warning[]; hypers:
 /** Lay out a grale graph with elk.js. Exported so the eval app can run it in a
  * worker thread without spawning a subprocess. */
 export async function layout(g: graleGraph): Promise<graleGraph> {
-  const { root, layoutOptions, warnings, hypers } = buildElk(g);
+  const out = structuredClone(g); // layout MUST NOT mutate its argument
+  const warnings = inspectRequest('grale-elk', out, IGNORED);
+  const { root, layoutOptions, hypers } = buildElk(out);
   const elk = new (ELK as unknown as { new (): { layout(n: ElkN, a?: { layoutOptions?: Record<string, string> }): Promise<ElkN> } })();
-  const t0 = Date.now();
+  const t0 = process.hrtime.bigint();
   const res = await elk.layout(root, { layoutOptions });
-  return applyElk(g, res, { warnings, hypers }, (Date.now() - t0) * 1000);
+  const micros = Number(process.hrtime.bigint() - t0) / 1e3;
+  return applyElk(out, res, { warnings, hypers }, micros);
 }
 
-async function main(): Promise<void> {
-  const arg = process.argv[2];
-  const text = arg && !arg.startsWith('-') ? readFileSync(arg, 'utf8') : readFileSync(0, 'utf8');
-  const out = await layout(JSON.parse(text) as graleGraph);
-  process.stdout.write(JSON.stringify(out));
-}
-
-// only run the CLI when executed directly — not when imported (e.g. by the worker).
-// realpathSync resolves symlinks (node_modules/grale-api is a symlink) so the
-// invoked path matches import.meta.url, which Node reports as the real path.
-if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href)
-  main().catch((e) => { process.stderr.write(`grale-elk: ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });
+if (isMain(import.meta.url)) runEngineCli('grale-elk', layout);

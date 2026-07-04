@@ -41,7 +41,7 @@ import type { graleGraph } from 'grale-api';    // the layout contract (api/)
 import { renderSvg } from 'grale-api/render';    // draw any result to SVG (viewer/)
 ```
 
-> **Status: specification — version 1.0.0.** The full normative spec lives in
+> **Status: specification — version 2.0.0.** The full normative spec lives in
 > [`api/doc/graph-layout-api.adoc`](api/doc/graph-layout-api.adoc); the dagre baseline it supersets
 > is in [`api/doc/dagre-js.adoc`](api/doc/dagre-js.adoc). See [`CHANGELOG.md`](CHANGELOG.md) for the
 > release history.

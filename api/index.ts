@@ -35,4 +35,5 @@ export type {
   Hyperedge,
   graleGraph,
   Layout,
+  SyncLayout,
 } from './types';

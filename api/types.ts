@@ -101,6 +101,10 @@ export interface GraphLabel {
   focus?: string | string[];
   /** Round every edge turn to this radius (px), default `0` (§"Self-loops and corner rounding"). */
   cornerRadius?: number;
+  /** Edge routing style, default `'polyline'` (§"Edge routing"). A bias like
+   * `prefDir`: an engine that cannot route the requested style falls back to
+   * its native one. */
+  edgeRouting?: 'orthogonal' | 'polyline' | 'spline';
   /** Marker registry (SVG-`<defs>` style); referenced via `startMarker`/`endMarker` (§markers). */
   markers?: Record<string, MarkerDef>;
   /** Log verbosity / diagnostics detail, default `'WARN'` (§"Debug settings"). */
@@ -431,6 +435,10 @@ export interface graleGraph {
  * The grale layout function: a pure function, JSON in / JSON out (§`layout`).
  * It returns a *new* envelope of the same shape with positions filled in;
  * `diagnostics.elapsedMicros` aside, equal request ⇒ equal output. It does not
- * mutate its argument.
+ * mutate its argument. May be async (e.g. the elk adapter) — the process
+ * contract in `doc/engine-contract.adoc` is agnostic to this.
  */
-export type Layout = (graph: graleGraph) => graleGraph;
+export type Layout = (graph: graleGraph) => graleGraph | Promise<graleGraph>;
+
+/** A {@link Layout} that resolves synchronously (e.g. the dagre adapter). */
+export type SyncLayout = (graph: graleGraph) => graleGraph;

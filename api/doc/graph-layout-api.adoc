@@ -1,7 +1,7 @@
 = grale API
 Dr. Max Völkel <mv@maxvoelkel.de>
-:revdate: 2026-06-16
-:revnumber: 1.0.0
+:revdate: 2026-07-04
+:revnumber: 2.0.0
 :toc: left
 :toclevels: 3
 :sectnums:
@@ -21,7 +21,8 @@ grale request *unchanged*, and grale only adds optional fields. On top of the da
 structure grale adds optional capabilities the original lacks: *pinned nodes*, *focus
 nodes*, *layout stability across turns* (`prevLayouts`), *per-edge preferred directions*
 and *hidden constraint links*, *per-side node ports*, *reusable edge markers*, *n-ary
-hyperedges*, and honoured edge *weight* and *lineWidth*. Every label may carry opaque
+hyperedges*, an *edge-routing style hint*, and honoured edge *weight* and *lineWidth*.
+Every label may carry opaque
 *`data`* for the renderer, and it returns *layout diagnostics* (warnings, timing) that
 dagre omits.
 
@@ -170,6 +171,7 @@ structure with positions filled in.
 | graph `value`  | `prevLayouts`          | array of past `{node-id -> position}` frames (stability history)
 | graph `value`  | `focus`                | node id(s) the layout centres on
 | graph `value`  | `cornerRadius`         | round edge turns (px)
+| graph `value`  | `edgeRouting`          | routing-style hint `'orthogonal'\|'polyline'\|'spline'` (a bias, like `prefDir`)
 | graph `value`  | `markers`              | marker registry (reserve endpoint space; reused like SVG defs)
 | graph `value`  | `logLevel`/`visualDebug` | debug verbosity; draw debug overlays
 | node `value`   | `pinned: boolean`      | hard-pin node at its `x`/`y` (treat them as input)
@@ -272,6 +274,7 @@ The dagre options (`rankdir`, `align`, `nodesep`, `edgesep`, `ranksep`, `marginx
 | `prevLayouts`  | `NodePositions[]`  | `[]` | layout history; each element is a `{ node-id -> {x,y} }` map of a past frame, ordered oldest first. A node's anchor is its position in the latest frame that contains it. See <<respecting-previous-layouts>>.
 | `focus`        | `string \| string[]` | —  | node id(s) the layout organises around — see <<focus>>
 | `cornerRadius` | number             | `0`  | round every edge turn to this radius in pixels; `0` keeps sharp corners — see <<edges-misc>>
+| `edgeRouting`  | `'orthogonal'\|'polyline'\|'spline'` | `'polyline'` | routing-style hint (a bias, not a constraint) — see <<edge-routing>>
 | `markers`      | `Record<string, MarkerDef>` | `{}` | marker registry; edges reference entries via `startMarker`/`endMarker` — see <<markers>>
 | `logLevel`     | `'DEBUG'\|'INFO'\|'WARN'\|'ERROR'` | `'WARN'` | log verbosity / diagnostics detail — see <<debug>>
 | `visualDebug`  | boolean            | `false` | include debug overlays in the output — see <<debug>>
@@ -583,15 +586,37 @@ new name avoids the clash.
 { "v": "a", "w": "b", "value": { "weight": 5, "lineWidth": 4 } }
 ----
 
+[[edge-routing]]
+==== Edge routing
+
+The graph-level `edgeRouting` hints which routing *style* the engine should produce:
+
+[source,json5]
+----
+{ "value": { "edgeRouting": "orthogonal" } }   // 'orthogonal' | 'polyline' | 'spline'
+----
+
+* Like `prefDir`, it is a *bias*, not a constraint: an engine that cannot route the
+  requested style falls back to its native one (no warning — the output is still valid).
+* The *output contract does not change*: whatever the style, the route is delivered as
+  the same `points` polyline (with `normals`). `orthogonal` biases the engine toward
+  axis-aligned segments, `spline` toward routes meant to be drawn smoothly; a renderer
+  combines the points with `cornerRadius` either way.
+* Default `'polyline'` — free-angle segments, the dagre-like behaviour.
+
+(Promoted to the core in 2.0.0 from the ELK adapter analysis, `xref:grale-elk.adoc[]` —
+ELK maps it directly to `elk.edgeRouting`.)
+
 [[edges-misc]]
 ==== Self-loops and corner rounding
 
 * *Self-loops.* An edge whose `v` and `w` are the same node (`v === w`) is allowed and
   drawn as a loop on one of the node's sides; it may bind a `fromPort` / `toPort` like any
   other edge. (dagre mishandles self-loops in clusters — issue #120.)
-* *Corner rounding.* grale draws a single edge style — routed poly-lines, not a choice of
-  orthogonal vs spline (issues #111, #136). The graph-level `cornerRadius` is the one knob:
-  it rounds every edge turn to that radius in pixels, `0` (default) leaving sharp corners.
+* *Corner rounding.* grale output is always routed poly-lines — there is no separate
+  spline output shape (issues #111, #136); <<edge-routing>> only biases where the
+  waypoints go. The graph-level `cornerRadius` is the one drawing knob: it rounds every
+  edge turn to that radius in pixels, `0` (default) leaving sharp corners.
 
 [[markers]]
 ==== Markers
@@ -934,7 +959,7 @@ grale reduces exactly to the dagre structure when none of the additions are pres
 Formally, for a request where:
 
 * no node `value` has `pinned` or `ports`,
-* the graph `value` has no `stability` (or `0`), no `prevLayouts`, no `focus`, no `cornerRadius` (or `0`), no `markers`, no `logLevel`, and no `visualDebug`,
+* the graph `value` has no `stability` (or `0`), no `prevLayouts`, no `focus`, no `cornerRadius` (or `0`), no `edgeRouting` (or `'polyline'`), no `markers`, no `logLevel`, and no `visualDebug`,
 * no edge `value` has `prefDir`, `hidden`, `lineWidth`, `fromPort`, `toPort`, `startMarker`, `endMarker`, or `weight: 0`,
 * there are no self-loops,
 * there are no `hyperedges`, and no edge carries an `id`,
@@ -964,184 +989,26 @@ otherwise the structure and result shape are identical. See the opening callout.
 
 === TypeScript types
 
-The dagre fields are repeated here so the grale label types are self-contained; their
-authoritative semantics live in `xref:dagre-js.adoc[]`.
+The normative TypeScript realisation of this data model lives *in this repo*, beside the
+spec, and is published as the `grale-api` package:
+
+* link:../types.ts[`api/types.ts`] — every interface (`graleGraph`, the labels,
+  diagnostics, debug layers, hyperedges) plus the `Layout` function type;
+* link:../geometry.ts[`api/geometry.ts`] — the `Point` primitive.
+
+The spec deliberately does **not** repeat the listing: the field tables above are the
+prose contract, `types.ts` is the single machine-readable source (its doc comments
+reference the sections here). Earlier revisions duplicated the code block in this
+section and the two drifted — importing the types is always right:
 
 [source,ts]
 ----
-export type Direction = 'up' | 'down' | 'left' | 'right';
-
-export type Side = 'top' | 'left' | 'bottom' | 'right';
-
-export interface PortRef { side: Side; index: number; }
-
-export interface MarkerDef {
-  width: number;     // reserved space along the edge (px)
-  height: number;    // reserved space across the edge (px)
-  dock?: Side;       // side of the marker box that meets the line; default 'right'
-}
-
-export interface Point { x: number; y: number; }
-
-export type NodePositions = Record<string, Point>;   // one past frame: node id -> centre
-
-// --- graph label (JsonGraph.value) ---
-export interface GraphLabel {
-  // dagre
-  rankdir?: 'TB' | 'BT' | 'LR' | 'RL';
-  align?: 'UL' | 'UR' | 'DL' | 'DR';
-  nodesep?: number;
-  edgesep?: number;
-  ranksep?: number;
-  marginx?: number;
-  marginy?: number;
-  acyclicer?: 'greedy';
-  ranker?: 'network-simplex' | 'tight-tree' | 'longest-path';
-  width?: number;   // out
-  height?: number;  // out
-  // grale
-  stability?: number;                          // 0..1, default 0
-  prevLayouts?: NodePositions[];               // layout history, oldest first; newest last
-  focus?: string | string[];                   // node id(s) the layout centres on
-  cornerRadius?: number;                       // round edge turns (px), default 0
-  markers?: Record<string, MarkerDef>;         // marker registry (SVG-defs style)
-  logLevel?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';  // log verbosity, default 'WARN'
-  visualDebug?: boolean;                       // include debug overlays in output
-  data?: Record<string, unknown>;              // opaque passthrough
-}
-
-// --- node label (JsonNode.value) ---
-export interface NodeLabel {
-  // dagre
-  width?: number;
-  height?: number;
-  x?: number;   // out (also in, when pinned)
-  y?: number;
-  // grale
-  pinned?: boolean;   // treat x/y as input (hard pin) rather than output
-  ports?: { top?: number; left?: number; bottom?: number; right?: number };  // ports per side
-  zIndex?: number;                  // draw order (in/out)
-  data?: Record<string, unknown>;   // opaque passthrough
-}
-
-// --- edge label (JsonEdge.value) ---
-export interface EdgeLabel {
-  // dagre
-  minlen?: number;
-  weight?: number;
-  width?: number;
-  height?: number;
-  labelpos?: 'l' | 'c' | 'r';
-  labeloffset?: number;
-  points?: Point[];  // out
-  x?: number;        // out
-  y?: number;        // out
-  // grale
-  prefDir?: Direction;
-  hidden?: boolean;      // constrains layout but not drawn (no output points)
-  lineWidth?: number;    // reserved corridor width / line width (px), != dagre label width
-  fromPort?: PortRef;    // attach source end to a node port
-  toPort?: PortRef;      // attach target end to a node port
-  startMarker?: string;  // id into GraphLabel.markers
-  endMarker?: string;    // id into GraphLabel.markers
-  zIndex?: number;       // draw order (in/out)
-  normals?: (number | null)[];   // out: normal angle (rad) per points[] entry
-  crossings?: Point[];           // out: where this edge crosses another
-  data?: Record<string, unknown>;   // opaque passthrough
-}
-
-// --- diagnostics (output only) ---
-export interface Warning {
-  code: 'DANGLING_EDGE' | 'PIN_CONFLICT' | 'PINNED_NO_COORDS' | 'BAD_PORT' | 'BAD_MARKER' | 'BAD_FOCUS' | 'UNKNOWN_FIELD' | string;
-  message: string;
-  node?: string;
-  edge?: { v: string; w: string; name?: string };
-}
-
-export interface Diagnostics {
-  elapsedMicros: number;                                              // excluded from determinism
-  warnings: Warning[];                                               // empty on a clean run
-  displacement?: { moved: number; totalDx: number; totalDy: number };  // when stability honoured
-}
-
-// --- debug overlay layers (output only) ---
-export interface DebugStyle {
-  stroke?: string;       // stroke / outline colour
-  strokeWidth?: number;
-  fill?: string;         // 'none' for no fill; on text, the text colour
-  opacity?: number;      // 0..1
-  dashed?: boolean;
-}
-export interface DebugLine   extends DebugStyle { kind: 'line';   x1: number; y1: number; x2: number; y2: number; }
-export interface DebugCircle extends DebugStyle { kind: 'circle'; cx: number; cy: number; r: number; }
-export interface DebugRect   extends DebugStyle { kind: 'rect';   x: number; y: number; width: number; height: number; rx?: number; }
-export interface DebugText   extends DebugStyle { kind: 'text';   x: number; y: number; text: string; fontSize?: number; anchor?: 'start' | 'middle' | 'end'; }
-export type DebugShape = DebugLine | DebugCircle | DebugRect | DebugText;
-
-export interface DebugLayer {              // a named, nestable group (like an SVG <g>)
-  kind: 'layer';
-  name: string;                            // unique among siblings; path identifies the layer
-  visible?: boolean;                       // initial toggle state, default true
-  opacity?: number;                        // group opacity, 0..1
-  children: DebugNode[];                   // nested layers and/or leaf shapes, in draw order
-}
-export type DebugNode = DebugLayer | DebugShape;
-
-// --- hyperedges (n-ary) ---
-export interface Endpoint {
-  node: string;        // node id
-  marker?: string;     // id into GraphLabel.markers, placed at this end
-  port?: PortRef;      // dock this spoke to a node port
-}
-
-export type HyperedgePointKind = 'endpoint' | 'branch' | 'bend' | 'crossing';
-
-export interface HyperedgePoint {
-  kind: HyperedgePointKind;
-  x: number; y: number;
-  node?: string;            // out: set on 'endpoint' points
-  marker?: string;          // out: echoed on 'endpoint' points
-}
-
-export interface HyperedgeSegment {
-  ends: [number, number];      // point indices [i, j]
-  normals: [number, number];   // outward-normal angle (rad) leaving i->j and j->i
-}
-
-export interface HyperedgeTree {            // out
-  points: HyperedgePoint[];
-  segments: HyperedgeSegment[];             // tree edges; normals live on the ends
-}
-
-export interface HyperedgeLabel {
-  // shared with EdgeLabel (whole-hyperedge)
-  minlen?: number; weight?: number; hidden?: boolean; lineWidth?: number;
-  prefDir?: Direction; labelpos?: 'l' | 'c' | 'r'; labeloffset?: number;
-  zIndex?: number; data?: Record<string, unknown>;
-  // output
-  tree?: HyperedgeTree;
-  x?: number; y?: number;                   // label centre (out)
-}
-
-export interface Hyperedge {
-  id?: string;                 // optional identity (debugging / reference)
-  endpoints: Endpoint[];       // unordered set of { node, marker?, port? }
-  value?: HyperedgeLabel;
-}
-
-// --- the envelope (superset of graphlib JsonGraph) ---
-export interface graleGraph {
-  options: { directed: boolean; multigraph: boolean; compound: boolean };
-  value?: GraphLabel;
-  nodes: { v: string; value?: NodeLabel; parent?: string }[];
-  edges: { v: string; w: string; name?: string; id?: string; value?: EdgeLabel }[];
-  hyperedges?: Hyperedge[];
-  diagnostics?: Diagnostics;   // out
-  debug?: DebugLayer[];        // out: named, nestable debug overlay layers
-}
-
-export function layout(graph: graleGraph): graleGraph;
+import type { graleGraph, GraphLabel, NodeLabel, EdgeLabel,
+              Hyperedge, Diagnostics, Layout } from 'grale-api';
 ----
+
+The dagre fields are repeated in `types.ts` so the grale label types are self-contained;
+their authoritative semantics live in `xref:dagre-js.adoc[]`.
 
 .See also
 * `xref:dagre-js.adoc[]` — the dagre serialised JSON baseline this spec supersets
@@ -1169,6 +1036,7 @@ export function layout(graph: graleGraph): graleGraph;
 | node ports (4 sides, CCW)          | ➕ added | not in dagre
 | edge `weight` honoured / `lineWidth` | ➕ added | dagre ignores weight; no line width
 | `cornerRadius` edge rounding       | ➕ added | not in dagre
+| `edgeRouting` style hint           | ➕ added | dagre routes one style only
 | self-loops (`v === w`)             | ➕ added | drawn as a loop; dagre buggy in clusters
 | cross-cluster / child↔parent edges | ➕ added | dagre crashes
 | reusable edge markers (registry)   | ➕ added | dagre has none
@@ -1186,28 +1054,28 @@ export function layout(graph: graleGraph): graleGraph;
 === Graph-format features
 
 The graph-format registry (`graph-features.adoc`) classifies every format against
-a fixed set of capability *feature-ids*. For grale 1.0.0, per feature-id — which
+a fixed set of capability *feature-ids*. For grale 2.0.0, per feature-id — which
 the format uses and which it does not:
 
 [source]
 ----
-format:grale-1.0.0 ..does not use.. multiple-graphs-per-document ,, one graph per document
-format:grale-1.0.0 ..uses.. nodes
-format:grale-1.0.0 ..uses.. undirected-edges ,, options.directed false
-format:grale-1.0.0 ..uses.. directed-edges ,, options.directed true
-format:grale-1.0.0 ..does not use.. mixed-directionality-edges ,, directedness is graph-level via options.directed
-format:grale-1.0.0 ..uses.. hyperedges ,, n-ary hyperedges[] array, GraphML-style
-format:grale-1.0.0 ..does not use.. edges-on-edges
-format:grale-1.0.0 ..uses.. nested-graphs-in-nodes ,, compound graphs via node parent (options.compound)
-format:grale-1.0.0 ..does not use.. nested-graphs-in-edges
-format:grale-1.0.0 ..does not use.. nested-graphs-in-graphs
-format:grale-1.0.0 ..uses.. node-labels ,, node value/data label
-format:grale-1.0.0 ..uses.. edge-labels ,, edge value/data label
-format:grale-1.0.0 ..uses.. attributes-on-nodes ,, node value plus opaque data
-format:grale-1.0.0 ..uses.. attributes-on-edges ,, edge value (weight, lineWidth, minlen) plus opaque data
-format:grale-1.0.0 ..uses.. attributes-on-graphs ,, graph value label plus opaque data
-format:grale-1.0.0 ..does not use.. typed-edges ,, markers are visual, not a semantic edge type
+format:grale-2.0.0 ..does not use.. multiple-graphs-per-document ,, one graph per document
+format:grale-2.0.0 ..uses.. nodes
+format:grale-2.0.0 ..uses.. undirected-edges ,, options.directed false
+format:grale-2.0.0 ..uses.. directed-edges ,, options.directed true
+format:grale-2.0.0 ..does not use.. mixed-directionality-edges ,, directedness is graph-level via options.directed
+format:grale-2.0.0 ..uses.. hyperedges ,, n-ary hyperedges[] array, GraphML-style
+format:grale-2.0.0 ..does not use.. edges-on-edges
+format:grale-2.0.0 ..uses.. nested-graphs-in-nodes ,, compound graphs via node parent (options.compound)
+format:grale-2.0.0 ..does not use.. nested-graphs-in-edges
+format:grale-2.0.0 ..does not use.. nested-graphs-in-graphs
+format:grale-2.0.0 ..uses.. node-labels ,, node value/data label
+format:grale-2.0.0 ..uses.. edge-labels ,, edge value/data label
+format:grale-2.0.0 ..uses.. attributes-on-nodes ,, node value plus opaque data
+format:grale-2.0.0 ..uses.. attributes-on-edges ,, edge value (weight, lineWidth, minlen) plus opaque data
+format:grale-2.0.0 ..uses.. attributes-on-graphs ,, graph value label plus opaque data
+format:grale-2.0.0 ..does not use.. typed-edges ,, markers are visual, not a semantic edge type
 ----
 
 The registry records the same matrix as its canonical machine-readable source
-(`formats/json/grale/grale-1.0.0.adoc`, using `..supports..` / `..lacks..`).
+(`formats/json/grale/grale-2.0.0.adoc`, using `..supports..` / `..lacks..`).

@@ -61,7 +61,7 @@ Every addition is an optional field on a label; set none and the request reduces
 | **Stability** | `prevLayouts` + `stability` — keep nodes near where they were across turns, even after a node disappears and returns |
 | **Edge direction** | `prefDir` (per-edge, rotates with `rankdir`), `hidden` links (constrain layout, not drawn), `weight: 0` (drawn, doesn't constrain) |
 | **Attachment** | `ports` (per-side, counter-clockwise) + `fromPort`/`toPort`; `markers` (reusable, reserve space, SVG-defs style) + `startMarker`/`endMarker` |
-| **Edges** | `lineWidth`, `cornerRadius`, self-loops, edges across cluster boundaries, optional `id` |
+| **Edges** | `lineWidth`, `cornerRadius`, `edgeRouting` (style hint), self-loops, edges across cluster boundaries, optional `id` |
 | **Hyperedges** | n-ary `hyperedges[]` — a set of node endpoints, routed as a point-tree |
 | **Output** | per-point `normals`, edge `crossings`, `zIndex`, and a `diagnostics` object (warnings, timing, displacement) — none of which dagre returns |
 | **Passthrough** | `data` on any label for domain/renderer data the layouter ignores; grale-only keys under `data.grale` |
@@ -91,9 +91,12 @@ npx grale-dagre layout.json   # dagre (@dagrejs/dagre)         — engines/grale
 npx grale-elk   layout.json   # elk.js (see doc/grale-elk.adoc) — engines/grale-elk.ts
 ```
 
-Both report their pure layout time in `diagnostics.elapsedMicros`. Any command that follows the
-same stdin → stdout contract (`{}` in the command = the input file path) is a grale engine, so cale
-or your own engine drops in the same way.
+Both report their pure layout time in `diagnostics.elapsedMicros`, and both emit the
+[engine-contract](doc/engine-contract.adoc) diagnostics (`UNKNOWN_FIELD`, `DANGLING_EDGE`, and an
+aggregated `UNSUPPORTED` warning per grale feature they accept but don't honour). Any command that
+follows the same stdin → stdout contract (`{}` in the command = the input file path) is a grale
+engine — e.g. **cale** (the Calpano Layout Engine, the sibling [`../cale`](../cale) repo's native
+grale engine) or your own.
 
 ## Documentation
 

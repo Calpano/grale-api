@@ -3,35 +3,24 @@
 :idprefix:
 :idseparator: -
 
-Open improvements. (The 2026-07-04 consistency-pass findings were resolved in
-2.0.0 — meta→data release cut, `edgeRouting` promoted, adapter diagnostics,
-async `Layout`, renderer `<br>` support, spec TS-listing de-duplicated; see
-`CHANGELOG.md`.)
+Open items only. (Everything from the 2026-07-04 consistency pass shipped with
+2.0.0 — meta→data release, `edgeRouting`, adapter diagnostics, elk ports +
+weight mapping, overlay naming, shared text metric, `gen:dagre-issues` script,
+registry entry `graph-format-registry/formats/json/grale/grale-2.0.0.adoc`;
+see `CHANGELOG.md`.)
 
-== Engine adapters
+== Deferred spec questions
 
-* *grale-elk: map `minlen` / `weight`.* Neither is translated to an ELK option
-  (today both are flagged `UNSUPPORTED`); `doc/grale-elk.adoc` lists candidate
-  mappings (`elk.layered.*` priority/spacing — only loosely comparable, which
-  is why this needs deliberate tuning, not a mechanical mapping).
-* *grale-elk: ports.* ELK has a rich first-class port model
-  (`elk.portConstraints` etc.); the adapter could map grale's
-  `ports` + `fromPort`/`toPort` instead of warning `UNSUPPORTED`.
+Candidate additions noted in `doc/grale-elk.adoc`, deliberately *not* in 2.0.0
+until a use case demands them:
 
-== Renderer & viewer
-
-* *Overlay naming.* The debug panel says "box centers" where the spec says
-  node *centre*; consider "node centres" for term consistency (ripples into
-  `RenderOptions.boxCenters` and the grale-eval README).
-* *Two independent text-metric guesses.* `textLabel`'s 6.2 px/char halo width
-  and the spec's node-size estimation note (Roboto 16 px advance table) should
-  share one deterministic metric.
-
-== Docs
-
-* *`dagre-issues.adoc` is a hand-pulled snapshot* ("170 open issues",
-  2026-06-15). Add a script to regenerate it instead of hand-refreshing.
-* *Graph-format registry.* The spec's §"Graph-format features" references the
-  canonical registry file `formats/json/grale/grale-2.0.0.adoc` — create /
-  update it in the registry repo to match 2.0.0 (add `edgeRouting`; `meta` is
-  gone).
+* *Port constraint levels.* grale ports are fixed slots (the adapter emits ELK
+  `FIXED_ORDER`); ELK also knows `FREE` / `FIXED_SIDE` / `FIXED_RATIO` /
+  `FIXED_POS`. Add a constraint level to `ports` only if a caller needs looser
+  or stricter docking than fixed slots.
+* *Directed hyperedges.* grale `endpoints` are an unordered set; ELK's n-ary
+  edges are `sources[] → targets[]`. Add endpoint roles only if a real graph
+  needs "these producers feed those consumers".
+* *`minlen` for non-dagre engines.* No ELK equivalent exists; `minlen > 1` is
+  flagged `UNSUPPORTED` by grale-elk. Revisit if ELK grows per-edge layering
+  constraints.

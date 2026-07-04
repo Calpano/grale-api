@@ -118,8 +118,8 @@ offsets to absolutise, convert top-left→centre, and flatten `sections` →
 | edges `{v,w,name?,id?}`         | `ElkExtendedEdge {id, sources:[v], targets:[w]}` | binary edge = single source/target
 | `hyperedges[].endpoints[]` (unordered) | `sources[]` + `targets[]` (directed) | ELK n-ary edges are *directed* (sources→targets); grale's are an unordered set
 | edge `value.points` (out)       | `sections[].startPoint/bendPoints/endPoint` | flatten section(s) → polyline
-| edge `value.minlen`/`weight`    | `elk.layered.*` priority/spacing options | only loosely comparable
-| node `value.ports{side:count}` + `fromPort/toPort{side,index}` | `ElkPort` + `elk.port.side`, `elk.port.index`, `elk.portConstraints` | ELK ports are first-class objects with rich constraints
+| edge `value.weight`             | `elk.layered.priority.direction` / `….straightness` | *mapped by the adapter* (2.0.0); `weight: 0` and `minlen` have no ELK equivalent
+| node `value.ports{side:count}` + `fromPort/toPort{side,index}` | `ElkPort` + `elk.port.side`, `elk.port.index`, `elk.portConstraints: FIXED_ORDER` | *mapped by the adapter* (2.0.0): one fixed-order port per slot, grale's CCW ring converted to ELK's clockwise index
 | graph `value.rankdir`           | `elk.direction` (UP/DOWN/LEFT/RIGHT) | TB→DOWN, LR→RIGHT, …
 | graph `value.nodesep/edgesep/ranksep` | `elk.spacing.*` (many)         | ELK splits spacing into ~dozen options
 | graph `value.ranker`            | `elk.layered.nodePlacement.strategy` / `…cycleBreaking` etc. | engine-internal
@@ -214,10 +214,12 @@ pins, prefDir, hidden links, markers, debug, diagnostics). Neither is a superset
 adapter that reads grale on stdin and writes grale on stdout:
 
 . *grale → ELK.* Build an `ElkNode` tree: map `nodes[]` to `children` (nesting by
-  `parent` for compound), `edges[]` to `ElkExtendedEdge{sources:[v],targets:[w]}`,
-  `value.ports` to `ElkPort`s, edge/node label sizes to `ElkLabel`s. Translate
-  `rankdir`→`elk.direction`. Read engine knobs from `value.data.grale.engine` (algorithm,
-  edgeRouting, spacing) into `layoutOptions`.
+  `parent` for compound), `edges[]` to `ElkExtendedEdge{sources:[v],targets:[w]}`
+  (a valid `fromPort`/`toPort` swaps the node id for its port id; edge `weight`
+  becomes `elk.layered.priority.*`), `value.ports` to fixed-order `ElkPort`s.
+  Translate `rankdir`→`elk.direction` and `value.edgeRouting`→`elk.edgeRouting`.
+  Read engine knobs from `value.data.grale.engine` (algorithm, edgeRouting,
+  spacing) into `layoutOptions`.
 . *Lay out.* `await elk.layout(elkGraph, { layoutOptions })` with
   `elk.bundled.js` (sync, no worker).
 . *ELK → grale.* Walk the result accumulating parent offsets to **absolutise**

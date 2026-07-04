@@ -41,6 +41,7 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
     "svg": "tsx viewer/grale-to-svg.ts",
+    "gen:dagre-issues": "node scripts/gen-dagre-issues.mjs",
     "dagre": "tsx api/engines/grale-dagre.ts",
     "elk": "tsx api/engines/grale-elk.ts",
     "dev": "vite",

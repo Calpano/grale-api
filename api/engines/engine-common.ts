@@ -13,7 +13,7 @@
  */
 import { readFileSync, realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import type { graleGraph, Layout, Warning } from '../types.js';
+import type { graleGraph, Layout, PortRef, Warning } from '../types.js';
 
 // --- process contract -------------------------------------------------------
 
@@ -55,10 +55,14 @@ const HYPEREDGE_FIELDS = new Set(['minlen', 'weight', 'hidden', 'lineWidth', 'pr
  * - `DANGLING_EDGE` — an edge / hyperedge endpoint referencing a missing node;
  * - `PINNED_NO_COORDS` — `pinned: true` without `x`/`y` (only when the engine
  *   honours pins, i.e. `'pinned'` is not in `ignored`);
+ * - `BAD_PORT` — a `fromPort`/`toPort`/endpoint `port` whose side/index is not
+ *   declared by the node (only when the engine honours ports, i.e. `'ports'`
+ *   is not in `ignored`); that end falls back to centre attachment;
  * - one aggregated warning per `ignored` feature that the request actually
  *   uses. Feature names are label field names, plus the pseudo-features
- *   `'hyperedges'` (the array is present and non-empty) and `'weight0'`
- *   (an edge declares the non-constraining `weight: 0`).
+ *   `'hyperedges'` (the array is present and non-empty), `'weight0'` (an edge
+ *   declares the non-constraining `weight: 0`), and `'minlen>1'` (an edge
+ *   declares a `minlen` above the constraint-free default `1`).
  */
 export function inspectRequest(engine: string, g: graleGraph, ignored: readonly string[]): Warning[] {
   const warnings: Warning[] = [];
@@ -94,10 +98,27 @@ export function inspectRequest(engine: string, g: graleGraph, ignored: readonly 
       if (n.value?.pinned && (n.value.x == null || n.value.y == null))
         warnings.push({ code: 'PINNED_NO_COORDS', message: `node '${n.v}' is pinned but has no x/y — pin ignored`, node: n.v });
 
+  // port references outside a node's declared slots (only when ports are honoured)
+  if (!ignore.has('ports')) {
+    const declared = new Map((g.nodes ?? []).map((n) => [n.v, n.value?.ports]));
+    const bad = (nodeId: string, ref: PortRef | undefined): boolean =>
+      !!ref && !(ref.index >= 0 && ref.index < (declared.get(nodeId)?.[ref.side] ?? 0));
+    for (const e of g.edges ?? []) {
+      const v = e.value;
+      if (!v) continue;
+      for (const [end, node] of [['fromPort', e.v], ['toPort', e.w]] as const)
+        if (bad(node, v[end])) warnings.push({ code: 'BAD_PORT', message: `edge ${e.v}->${e.w} ${end} { ${v[end]!.side}, ${v[end]!.index} } is not declared on node '${node}' — falls back to centre attachment`, edge: { v: e.v, w: e.w, ...(e.name ? { name: e.name } : {}) } });
+    }
+    for (const he of g.hyperedges ?? [])
+      for (const ep of he.endpoints ?? [])
+        if (bad(ep.node, ep.port)) warnings.push({ code: 'BAD_PORT', message: `hyperedge${he.id ? ` '${he.id}'` : ''} endpoint port { ${ep.port!.side}, ${ep.port!.index} } is not declared on node '${ep.node}' — falls back to centre attachment`, node: ep.node });
+  }
+
   // accepted-but-not-honoured features, aggregated per feature
   const uses = (feature: string): number => {
     if (feature === 'hyperedges') return g.hyperedges?.length ?? 0;
     if (feature === 'weight0') return (g.edges ?? []).filter((e) => e.value?.weight === 0).length;
+    if (feature === 'minlen>1') return (g.edges ?? []).filter((e) => (e.value?.minlen ?? 1) > 1).length + (g.hyperedges ?? []).filter((he) => (he.value?.minlen ?? 1) > 1).length;
     let count = 0;
     if ((g.value as Record<string, unknown> | undefined)?.[feature] != null) count++;
     for (const n of g.nodes ?? []) if ((n.value as Record<string, unknown> | undefined)?.[feature] != null) count++;

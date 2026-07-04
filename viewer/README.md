@@ -22,8 +22,10 @@ import { renderSvg } from 'grale-api/render';
 const svg = renderSvg(resultGraph, { debug: true });   // -> SVG string
 ```
 
-`debug: true` (and the granular overlay flags) overlay waypoints, per-point `normals`, `crossings`,
-node centres/coords, the layout bounding box, link-id badges, and `diagnostics.warnings`.
+`debug: true` (and the granular overlay flags — `positions`, `diagramArea`, `nodeCentres`,
+`linkPoints`, `bends`, `crossings`, `branches`, `normals`, `linkIds`) overlay waypoints, per-point
+`normals`, `crossings`, node centres/coords, the layout bounding box, link-id badges, and
+`diagnostics.warnings`.
 
 ## CLI
 
@@ -37,8 +39,8 @@ npx grale-to-svg layout.out.json -d --watch # debug overlays, re-render on chang
 
 ## Web component
 
-`<grale-view>` is a custom element with pan/zoom, toggleable overlay categories (positions, box
-centers, link points, bends, crossings, branches, normals, link ids), engine debug layers
+`<grale-view>` is a custom element with pan/zoom, toggleable overlay categories (positions, node
+centres, link points, bends, crossings, branches, normals, link ids), engine debug layers
 (`graph.debug`), full-screen, and link click/hover highlighting.
 
 ```bash

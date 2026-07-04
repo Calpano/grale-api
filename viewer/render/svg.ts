@@ -17,14 +17,14 @@ import type { EdgeLabel, NodeLabel, MarkerDef, graleGraph, DebugLayer, DebugNode
 
 export interface RenderOptions {
   /** Master switch turning on the default overlay set (positions, diagram area,
-   * box centers, link points). The granular flags below override it. */
+   * node centres, link points). The granular flags below override it. */
   debug?: boolean;
   /** Node coordinate text labels. */
   positions?: boolean;
   /** Layout bounding box + diagnostics warnings. */
   diagramArea?: boolean;
   /** A dot at each node centre. */
-  boxCenters?: boolean;
+  nodeCentres?: boolean;
   /** A dot at every routed link waypoint (all of them, incl. comb points). */
   linkPoints?: boolean;
   /** Rings at link bend vertices. */
@@ -65,6 +65,21 @@ const dataOf = (v: { data?: Record<string, unknown> } | undefined, k: string): u
   v?.data?.[k];
 const str = (x: unknown, d = ''): string => (typeof x === 'string' ? x : d);
 const numv = (x: unknown, d: number): number => (typeof x === 'number' ? x : d);
+
+/** Deterministic text-width estimate (px): a coarse per-character advance
+ * table in em units × `fontSize`. The one metric shared by every renderer
+ * text box (label halos, link badges), so all sizing guesses agree — the same
+ * spirit as the spec's node-size estimation note (§"Node label additions"),
+ * which uses a full per-character advance table at Roboto 16 px. */
+const EM_NARROW = /[iIl.,:;'|!¡\[\]()\{\}·\s]/; // ~0.30 em
+const EM_WIDE = /[mwMW@%⇒—]/; //                   ~0.92 em
+const EM_UPPER = /[A-Z0-9_ÄÖÜ#+=<>~^]/; //         ~0.70 em
+const charEm = (c: string): number => (EM_NARROW.test(c) ? 0.3 : EM_WIDE.test(c) ? 0.92 : EM_UPPER.test(c) ? 0.7 : 0.55);
+const textW = (s: string, fontSize: number): number => {
+  let em = 0;
+  for (const c of s) em += charEm(c);
+  return em * fontSize;
+};
 
 const sub = (a: V, b: V): V => ({ x: a.x - b.x, y: a.y - b.y });
 const add = (a: V, b: V): V => ({ x: a.x + b.x, y: a.y + b.y });
@@ -146,7 +161,7 @@ function markerSvg(tip: V, dir: V, def: MarkerDef, id: string, color: string): s
 function textLabel(x: number, y: number, text: string, color: string, halo: boolean): string {
   const lines = text.split(/<br\s*\/?>/i);
   const lineH = 13;
-  const w = Math.max(...lines.map((l) => l.length)) * 6.2 + 8;
+  const w = Math.max(...lines.map((l) => textW(l, 11))) + 8;
   const h = lines.length === 1 ? 18 : lines.length * lineH + 5;
   const bg = halo
     ? `<rect x="${f(x - w / 2)}" y="${f(y - h / 2)}" width="${f(w)}" height="${f(h)}" rx="3" fill="#ffffffd9" />`
@@ -160,7 +175,7 @@ function textLabel(x: number, y: number, text: string, color: string, halo: bool
 
 /** A tiny pill labelling a link with its id/index, centred at (x, y). */
 function linkBadge(x: number, y: number, text: string): string {
-  const w = text.length * 4.4 + 6;
+  const w = textW(text, 6.5) + 6;
   return (
     `<g><rect x="${f(x - w / 2)}" y="${f(y - 5)}" width="${f(w)}" height="10" rx="5" ` +
     `fill="#eef2ff" stroke="#6366f1" stroke-width="0.5" />` +
@@ -444,7 +459,7 @@ export function renderSvg(graph: graleGraph, opts: RenderOptions = {}): string {
   const show = {
     positions: opts.positions ?? dbg,
     diagramArea: opts.diagramArea ?? dbg,
-    boxCenters: opts.boxCenters ?? dbg,
+    nodeCentres: opts.nodeCentres ?? dbg,
     linkPoints: opts.linkPoints ?? dbg,
     bends: opts.bends ?? dbg,
     crossings: opts.crossings ?? dbg,
@@ -455,10 +470,10 @@ export function renderSvg(graph: graleGraph, opts: RenderOptions = {}): string {
   const ovl = (name: string, content: string) => (content ? `<g data-overlay="${esc(name)}">${content}</g>` : '');
   const dot = (p: V, r: number, fill: string) => `<circle cx="${f(p.x)}" cy="${f(p.y)}" r="${f(r)}" fill="${fill}" />`;
   const ring = (p: V, r: number, stroke: string) => `<circle cx="${f(p.x)}" cy="${f(p.y)}" r="${f(r)}" fill="none" stroke="${stroke}" stroke-width="1.2" />`;
-  if (show.boxCenters) {
+  if (show.nodeCentres) {
     let s = '';
     for (const n of graph.nodes ?? []) { const v = n.value; if (!v || v.x == null || v.y == null) continue; s += dot({ x: v.x, y: v.y }, 2, '#ef4444'); }
-    body += ovl('box centers', s);
+    body += ovl('node centres', s);
   }
   if (show.positions) {
     let s = '';

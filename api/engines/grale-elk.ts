@@ -14,9 +14,10 @@
  *     "edgeRouting": "orthogonal"|"polyline"|"spline",   // overrides value.edgeRouting
  *     "layoutOptions": { "elk.…": "…" } }
  *
- * grale features ELK has no mapping for (pins, ports, markers, stability, …)
- * are accepted and echoed, each with an `UNSUPPORTED` warning — see
- * `engine-common.ts`.
+ * Ports map to fixed-order ELK ports (side + clockwise index) and edge
+ * `weight` to ELK's layered priorities. grale features ELK has no mapping for
+ * (pins, markers, stability, …) are accepted and echoed, each with an
+ * `UNSUPPORTED` warning — see `engine-common.ts`.
  *
  * Hyperedges: ELK's algorithms only route *simple* edges ("Passed edge is not
  * 'simple'"), so each grale hyperedge is decomposed into a small dummy hub node
@@ -29,9 +30,10 @@ import type { graleGraph, HyperedgePoint, HyperedgeSegment, Warning } from '../t
 import { inspectRequest, isMain, runEngineCli } from './engine-common.js';
 
 type Pt = { x: number; y: number };
-interface ElkN { id: string; width?: number; height?: number; x?: number; y?: number; children?: ElkN[]; edges?: ElkE[]; layoutOptions?: Record<string, string>; }
+interface ElkP { id: string; width?: number; height?: number; layoutOptions?: Record<string, string>; }
+interface ElkN { id: string; width?: number; height?: number; x?: number; y?: number; children?: ElkN[]; ports?: ElkP[]; edges?: ElkE[]; layoutOptions?: Record<string, string>; }
 interface ElkSection { startPoint: Pt; endPoint: Pt; bendPoints?: Pt[]; }
-interface ElkE { id: string; sources: string[]; targets: string[]; sections?: ElkSection[]; }
+interface ElkE { id: string; sources: string[]; targets: string[]; sections?: ElkSection[]; layoutOptions?: Record<string, string>; }
 
 const directionOf = (r?: string): string => (r === 'BT' ? 'UP' : r === 'LR' ? 'RIGHT' : r === 'RL' ? 'LEFT' : 'DOWN');
 const normalAngle = (a: Pt, b: Pt): number => Math.atan2(b.x - a.x, -(b.y - a.y)); // perpendicular to a→b
@@ -40,8 +42,13 @@ type Arm = { edgeId: string; node: string; marker?: string };
 type HyperPlan = { hub: string; arms: Arm[] };
 
 /** grale features elk.js ignores — echoed, warned about, never honoured.
- * (`minlen`/`weight` have no ELK mapping yet — see doc/grale-elk.adoc.) */
-const IGNORED = ['pinned', 'ports', 'fromPort', 'toPort', 'markers', 'startMarker', 'endMarker', 'stability', 'prevLayouts', 'focus', 'prefDir', 'lineWidth', 'visualDebug', 'minlen', 'weight', 'align', 'edgesep', 'marginx', 'marginy', 'acyclicer', 'ranker'] as const;
+ * (`ports`/`fromPort`/`toPort` and `weight` ARE mapped; `minlen` above the
+ * constraint-free default 1 has no ELK equivalent — see doc/grale-elk.adoc.) */
+const IGNORED = ['pinned', 'markers', 'startMarker', 'endMarker', 'stability', 'prevLayouts', 'focus', 'prefDir', 'lineWidth', 'visualDebug', 'weight0', 'minlen>1', 'align', 'edgesep', 'marginx', 'marginy', 'acyclicer', 'ranker'] as const;
+
+// grale sides are absolute (CSS naming), like ELK's — no rankdir rotation.
+const SIDE_ELK: Record<string, string> = { top: 'NORTH', right: 'EAST', bottom: 'SOUTH', left: 'WEST' };
+const portId = (node: string, side: string, index: number): string => `${node}__p_${side}${index}`;
 
 function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, string>; hypers: HyperPlan[] } {
   const engine = ((g.value?.data as { grale?: { engine?: Record<string, unknown> } } | undefined)?.grale?.engine ?? {}) as Record<string, unknown>;
@@ -60,7 +67,24 @@ function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, st
   if (g.options?.compound) layoutOptions['elk.hierarchyHandling'] = 'INCLUDE_CHILDREN';
 
   const byId = new Map<string, ElkN>();
-  for (const n of g.nodes ?? []) byId.set(n.v, { id: n.v, width: n.value?.width ?? 40, height: n.value?.height ?? 30 });
+  for (const n of g.nodes ?? []) {
+    const en: ElkN = { id: n.v, width: n.value?.width ?? 40, height: n.value?.height ?? 30 };
+    // grale ports (slot counts per side) -> fixed-order ELK ports. grale's CCW
+    // ring (top: right->left, left: top->bottom, bottom: left->right,
+    // right: bottom->top) maps to ELK's clockwise index (top-left start,
+    // sides top,right,bottom,left) by reversing each side's slots.
+    const ports = n.value?.ports;
+    if (ports) {
+      const counts = { top: ports.top ?? 0, right: ports.right ?? 0, bottom: ports.bottom ?? 0, left: ports.left ?? 0 };
+      const cwBase = { top: 0, right: counts.top, bottom: counts.top + counts.right, left: counts.top + counts.right + counts.bottom };
+      en.ports = [];
+      for (const side of ['top', 'right', 'bottom', 'left'] as const)
+        for (let i = 0; i < counts[side]; i++)
+          en.ports.push({ id: portId(n.v, side, i), width: 1, height: 1, layoutOptions: { 'elk.port.side': SIDE_ELK[side], 'elk.port.index': String(cwBase[side] + (counts[side] - 1 - i)) } });
+      en.layoutOptions = { 'elk.portConstraints': 'FIXED_ORDER' };
+    }
+    byId.set(n.v, en);
+  }
   const roots: ElkN[] = [];
   for (const n of g.nodes ?? []) {
     const en = byId.get(n.v)!;
@@ -69,10 +93,26 @@ function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, st
     else roots.push(en);
   }
 
+  // a valid port ref (declared side + in-range index) attaches the edge end to
+  // the port; anything else falls back to the node centre (BAD_PORT is warned
+  // by inspectRequest).
+  const portCounts = new Map((g.nodes ?? []).map((n) => [n.v, n.value?.ports]));
+  const endId = (node: string, ref: { side: 'top' | 'left' | 'bottom' | 'right'; index: number } | undefined): string =>
+    ref && ref.index >= 0 && ref.index < (portCounts.get(node)?.[ref.side] ?? 0) ? portId(node, ref.side, ref.index) : node;
+
   const edges: ElkE[] = [];
   (g.edges ?? []).forEach((e, i) => {
     if (!byId.has(e.v) || !byId.has(e.w)) return; // dangling: warned by inspectRequest, echoed without points
-    edges.push({ id: e.id ?? `__e${i}`, sources: [e.v], targets: [e.w] });
+    const ee: ElkE = { id: e.id ?? `__e${i}`, sources: [endId(e.v, e.value?.fromPort)], targets: [endId(e.w, e.value?.toPort)] };
+    // weight = importance: higher-weight edges are kept shorter/straighter.
+    // Mapped to ELK's layered priorities; the non-constraining weight 0 has no
+    // ELK equivalent and stays flagged UNSUPPORTED ('weight0').
+    const w = e.value?.weight;
+    if (typeof w === 'number' && w > 0 && w !== 1) {
+      const p = String(Math.max(1, Math.round(w)));
+      ee.layoutOptions = { 'elk.layered.priority.direction': p, 'elk.layered.priority.straightness': p };
+    }
+    edges.push(ee);
   });
 
   // decompose each hyperedge: dummy hub + one simple edge per endpoint
@@ -83,7 +123,7 @@ function buildElk(g: graleGraph): { root: ElkN; layoutOptions: Record<string, st
     (he.endpoints ?? []).forEach((ep, k) => {
       if (!byId.has(ep.node)) return; // dangling endpoint: warned by inspectRequest
       const edgeId = `__h${hi}_${k}`;
-      edges.push({ id: edgeId, sources: [hub], targets: [ep.node] });
+      edges.push({ id: edgeId, sources: [hub], targets: [endId(ep.node, ep.port)] });
       arms.push({ edgeId, node: ep.node, marker: ep.marker });
     });
     if (arms.length) { roots.push({ id: hub, width: 6, height: 6 }); hypers.push({ hub, arms }); }

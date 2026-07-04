@@ -26,7 +26,7 @@
   let ov = $state({
     positions: debug,
     diagramArea: debug,
-    boxCenters: debug,
+    nodeCentres: debug,
     linkPoints: debug,
     bends: debug,
     crossings: debug,
@@ -263,7 +263,7 @@
         <div class="sub">overlays</div>
         <label><input type="checkbox" bind:checked={ov.positions} /> positions</label>
         <label><input type="checkbox" bind:checked={ov.diagramArea} /> diagram area</label>
-        <label><input type="checkbox" bind:checked={ov.boxCenters} /> box centers</label>
+        <label><input type="checkbox" bind:checked={ov.nodeCentres} /> node centres</label>
         <label><input type="checkbox" bind:checked={ov.linkPoints} /> link points</label>
         <ul>
           <li><label><input type="checkbox" bind:checked={ov.bends} /> bend points</label></li>

@@ -31,8 +31,15 @@ library, version numbers describe the specification, not a published package:
   `elk.edgeRouting`.
 - **Adapter diagnostics.** Both adapters now emit the warnings the engine
   contract asks for: `UNKNOWN_FIELD` (typo detection), `DANGLING_EDGE`,
-  and one aggregated `UNSUPPORTED` warning per accepted-but-not-honoured grale
-  feature (shared `engines/engine-common.ts`).
+  `BAD_PORT`, and one aggregated `UNSUPPORTED` warning per
+  accepted-but-not-honoured grale feature (shared `engines/engine-common.ts`).
+- **grale-elk: ports and weight honoured.** grale `ports` + `fromPort`/`toPort`
+  (and hyperedge endpoint `port`) map to fixed-order ELK ports (grale's CCW
+  ring converted to ELK's clockwise `elk.port.index`); edge `weight` maps to
+  `elk.layered.priority.direction`/`.straightness`. `weight: 0` and
+  `minlen > 1` remain flagged `UNSUPPORTED` (no ELK equivalent).
+- **`npm run gen:dagre-issues`** — regenerates `api/doc/dagre-issues.adoc`
+  from the GitHub API instead of hand-refreshing the snapshot.
 - **`grale-dagre` adapter** — dagre as a stdin/stdout CLI engine (mirrors
   `grale-elk`), reporting pure layout time in `diagnostics.elapsedMicros`.
 - **`SyncLayout` type** — `Layout` is now possibly-async
@@ -67,6 +74,10 @@ library, version numbers describe the specification, not a published package:
   and the reusable `<grale-view>` web component.
 - **Test data** (in the `graph-test-data` repo) migrated `meta` → `data` and
   moved from `json/grale/grale-1.0.0/` to `json/grale/grale-2.0.0/`.
+- **Renderer overlay naming**: the "box centers" overlay is now "node centres"
+  (`RenderOptions.boxCenters` → `nodeCentres`), matching the spec's term; all
+  renderer text boxes (label halos, link badges) now share one deterministic
+  per-character width metric.
 
 ## [1.0.0] - 2026-06-16
 

@@ -33,6 +33,7 @@
     branches: debug,
     normals: false,
     linkIds: false,
+    linkLabels: true,
   });
 
   const result = $derived.by(() => {
@@ -272,6 +273,7 @@
         </ul>
         <label><input type="checkbox" bind:checked={ov.normals} /> normals</label>
         <label><input type="checkbox" bind:checked={ov.linkIds} /> link ids</label>
+        <label><input type="checkbox" bind:checked={ov.linkLabels} /> link labels</label>
         {#if layers.length}
           <div class="sub">layers</div>
           {@render layerTree(layers, '')}

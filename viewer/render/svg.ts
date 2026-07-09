@@ -38,6 +38,8 @@ export interface RenderOptions {
   /** Badge each link with its `id` (or its index when it has none) — for referencing
    * individual links (e.g. in a screenshot). */
   linkIds?: boolean;
+  /** Edge/hyperedge `data.label` text. Default `true`. */
+  linkLabels?: boolean;
   /** Blank margin around the layout bounding box (px). Default 24. */
   padding?: number;
   /** Background fill. Default `'#ffffff'`. Use `'none'` for transparent. */
@@ -322,7 +324,7 @@ function renderNode(n: NodeEntry): string {
   return s;
 }
 
-function renderEdge(e: EdgeEntry, markers: Record<string, MarkerDef>, radius: number, directed: boolean, nodeMap: Map<string, NodeBox>, id: string): string {
+function renderEdge(e: EdgeEntry, markers: Record<string, MarkerDef>, radius: number, directed: boolean, nodeMap: Map<string, NodeBox>, id: string, showLinkLabels: boolean): string {
   const v: EdgeLabel = e.value ?? {};
   const pts = v.points;
   if (v.hidden || !pts || pts.length < 2) return '';
@@ -345,14 +347,14 @@ function renderEdge(e: EdgeEntry, markers: Record<string, MarkerDef>, radius: nu
     s += markerSvg(pts[0], sub(pts[0], pts[1]), markers[v.startMarker], v.startMarker, color);
   }
   const label = str(dataOf(v, 'label'));
-  if (label) {
+  if (label && showLinkLabels) {
     const mid = pts[Math.floor(pts.length / 2)];
     s += textLabel(numv(v.x, mid.x), numv(v.y, mid.y), label, str(dataOf(v, 'textColor'), '#334155'), true);
   }
   return `<g class="grale-link" data-link-id="${esc(id)}">${s}</g>`;
 }
 
-function renderHyperedge(he: HyperEntry, markers: Record<string, MarkerDef>, id: string): string {
+function renderHyperedge(he: HyperEntry, markers: Record<string, MarkerDef>, id: string, showLinkLabels: boolean): string {
   const v = he.value ?? {};
   const tree = v.tree;
   if (v.hidden || !tree) return '';
@@ -377,7 +379,7 @@ function renderHyperedge(he: HyperEntry, markers: Record<string, MarkerDef>, id:
     }
   }
   const label = str(dataOf(v, 'label'));
-  if (label && v.x != null && v.y != null)
+  if (label && showLinkLabels && v.x != null && v.y != null)
     s += textLabel(v.x, v.y, label, str(dataOf(v, 'textColor'), '#6b21a8'), true);
   return `<g class="grale-link" data-link-id="${esc(id)}">${s}</g>`;
 }
@@ -441,11 +443,12 @@ export function renderSvg(graph: graleGraph, opts: RenderOptions = {}): string {
   for (const n of graph.nodes ?? []) { const v = n.value; if (v?.x != null && v?.y != null) nodeMap.set(n.v, { c: { x: v.x, y: v.y }, w: numv(v.width, 40), h: numv(v.height, 24) }); }
 
   // z-ordered body: edges/hyperedges default below nodes; explicit zIndex wins.
+  const showLinkLabels = opts.linkLabels ?? true;
   const items: { z: number; i: number; svg: string }[] = [];
   let order = 0;
   const directed = graph.options?.directed !== false;
-  (graph.edges ?? []).forEach((e, ei) => items.push({ z: numv(e.value?.zIndex, 0), i: order++, svg: renderEdge(e, markers, radius, directed, nodeMap, e.id ?? String(ei)) }));
-  (graph.hyperedges ?? []).forEach((he, hi) => items.push({ z: numv(he.value?.zIndex, 0), i: order++, svg: renderHyperedge(he, markers, he.id ?? `h${hi}`) }));
+  (graph.edges ?? []).forEach((e, ei) => items.push({ z: numv(e.value?.zIndex, 0), i: order++, svg: renderEdge(e, markers, radius, directed, nodeMap, e.id ?? String(ei), showLinkLabels) }));
+  (graph.hyperedges ?? []).forEach((he, hi) => items.push({ z: numv(he.value?.zIndex, 0), i: order++, svg: renderHyperedge(he, markers, he.id ?? `h${hi}`, showLinkLabels) }));
   for (const n of graph.nodes ?? []) items.push({ z: numv(n.value?.zIndex, 1), i: order++, svg: renderNode(n) });
   items.sort((a, b) => a.z - b.z || a.i - b.i);
   let body = items.map((x) => x.svg).join('');
